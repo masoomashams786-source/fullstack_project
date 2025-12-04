@@ -56,7 +56,7 @@ def signup():
         db.commit()
         # 🌟 Clean serialization is not necessary here, but we can return the user object
         # return jsonify({"message": "User created successfully", "user": new_user.to_dict()}), 201 
-        return jsonify({"message": "User created successfully"}), 201
+        return jsonify({"message": "User created successfully", "user": new_user.to_dict()}), 201
 
 
 @auth_bp.route("/login", methods=['POST'])
