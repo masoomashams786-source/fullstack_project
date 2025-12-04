@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, Table, Integer, String, Text, DateTime
+from sqlalchemy import ForeignKey, Table, Integer, String, Text, DateTime, Column
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from datetime import datetime
 
@@ -10,8 +10,8 @@ class Base(DeclarativeBase):
 note_tags = Table(
     'note_tags',
     Base.metadata,
-    mapped_column('note_id', Integer, ForeignKey('note.id'), primary_key=True),
-    mapped_column('tag_id', Integer, ForeignKey('tag.id'), primary_key=True)
+    Column('note_id', Integer, ForeignKey('note.id'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('tag.id'), primary_key=True)
 )
 
 class User(Base):
