@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime, timedelta
 
 # Import essentials from the main package and the authentication helper
-from . import get_db
+from .database import get_db
 from .models import Note, Tag
 from .auth import authenticate # Import the helper from the new auth file
 

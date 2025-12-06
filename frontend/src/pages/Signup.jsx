@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
   Field,
   Fieldset,
   Input,
+  Spinner,
   Stack,
   Alert,
 } from "@chakra-ui/react";
@@ -19,6 +21,9 @@ function Signup() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,14 +34,30 @@ function Signup() {
     e.preventDefault();
     setError("");
     setSuccess("");
+    setLoading(true);
 
     if (!formData.username || !formData.email || !formData.password) {
       setError("All fields are required.");
+      setLoading(false);
       return;
     }
+    if (formData.username.length < 3 || formData.username.length > 20) {
+        setError("Username must be between 3 and 20 characters."); 
+        setLoading(false);
+        return;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Please enter a valid email address.");
+      setLoading(false);
+      return;
+    }
+    
 
     if (formData.password.length < 8) {
       setError("Password must be at least 8 characters.");
+      setLoading(false);
       return;
     }
 
@@ -44,13 +65,18 @@ function Signup() {
       const res = await api.post("/signup", formData);
       setSuccess(res.data.message || "Signup successful!");
       setFormData({ username: "", email: "", password: "" });
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
     } catch (err) {
       setError(err.response?.data?.error || "Signup failed.");
+    }finally {
+      setLoading(false);
     }
   };
 
   return (
-    <Box p={6} borderWidth="1px" borderRadius="md" maxW="400px" mx="auto" mt="50px">
+    <Box p={8} borderWidth="1px" borderRadius="md" maxW="500px" mx="auto" mt="70px" boxShadow="lg" bg="whiteAlpha.100">
       <form onSubmit={handleSubmit}>
         <Fieldset.Root size="lg" maxW="md">
           <Stack spacing={4}>
@@ -83,6 +109,7 @@ function Signup() {
                 value={formData.username}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </Field.Root>
 
@@ -95,6 +122,7 @@ function Signup() {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </Field.Root>
 
@@ -107,13 +135,14 @@ function Signup() {
                 value={formData.password}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </Field.Root>
           </Fieldset.Content>
 
-          <Button type="submit" mt={4} colorScheme="blue">
-            Sign Up
-          </Button>
+          <Button type="submit" mt={4} colorScheme="blue" disabled={loading}>
+  {loading ? <Spinner size="sm" /> : "Sign Up"}
+</Button>
         </Fieldset.Root>
       </form>
     </Box>
