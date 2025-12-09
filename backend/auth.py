@@ -1,11 +1,14 @@
 from flask import Blueprint, request, jsonify, current_app
 from sqlalchemy import select, or_
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
 import bcrypt
 from jose import jwt, JWTError, ExpiredSignatureError
+from pydantic import ValidationError
 from .database import get_db
 from .models import User, RevokedToken
 from .utils import get_user_id_from_token
+from .schemas import SignupSchema
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -28,24 +31,18 @@ def authenticate():
 # -----------------------------
 @auth_bp.route('/signup', methods=['POST'])
 def signup():
-    data = request.get_json()
-    username = data.get('username', '').strip()
-    email = data.get('email', '').strip()
-    password = data.get('password', '')
+    data = request.get_json() or {}
 
-    # Required fields
-    if not username or not email or not password:
-        return jsonify({"error": "Missing required fields"}), 400
+    # Validate incoming JSON via Pydantic schema
+    try:
+        payload = SignupSchema(**data)
+    except ValidationError as e:
+        return jsonify({"errors": e.errors()}), 400
 
-    # Validations
-    if len(username) < 3 or len(username) > 20:
-        return jsonify({"error": "Username must be between 3 and 20 characters."}), 400
-    if len(password) < 8:
-        return jsonify({"error": "Password must be at least 8 characters long."}), 400
-    if not any(char.isupper() for char in password):
-        return jsonify({"error": "Password must contain at least one capital letter."}), 400
-    if '@' not in email or '.' not in email or email.count('@') > 1:
-        return jsonify({"error": "The email format is invalid."}), 400
+    # Normalize/prepare values
+    username = payload.username.strip()
+    email = payload.email.strip().lower()
+    password = payload.password
 
     with next(get_db()) as db:
         stmt = select(User).where(or_(User.username == username, User.email == email))
