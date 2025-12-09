@@ -1,14 +1,18 @@
-import React from "react";
 import { Navigate } from "react-router-dom";
 import { useContext } from "react";
-import { AuthContext } from "../pages/auth-context"; 
-
+import { AuthContext } from "../pages/auth-context";
 
 export default function ProtectedRoute({ children }) {
-    const  {isAuthenticated}  = useContext(AuthContext);
+  const { isAuthenticated, authLoading } = useContext(AuthContext);
 
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
-    }   
-    return children;
+  // ✅ WAIT until auth check finishes
+  if (authLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
 }

@@ -11,16 +11,7 @@ from .models import RevokedToken
 
 
 def get_user_id_from_token(db: Session):
-    """
-    Decodes the JWT and checks if it's revoked.
-    
-    Args:
-        db: The active SQLAlchemy 2.0 session.
-
-    Returns:
-        int: The user ID (sub) if the token is valid.
-        dict: An error dictionary if the token is invalid or revoked.
-    """
+   
     # 1. Read Authorization header
     auth_header = request.headers.get("Authorization", "")
     if not auth_header.startswith("Bearer "):

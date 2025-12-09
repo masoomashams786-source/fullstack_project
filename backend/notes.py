@@ -10,9 +10,7 @@ from .database import get_db
 from .models import Note, Tag
 from .auth import authenticate # Import the helper from the new auth file
 
-# -----------------------------
-# 📝 NOTES BLUEPRINT 📝
-# -----------------------------
+
 notes_bp = Blueprint('notes', __name__)
 
 @notes_bp.route('/notes', methods=['POST'])
@@ -38,21 +36,23 @@ def create_note():
 @notes_bp.route('/notes', methods=['GET'])
 def get_notes():
     user_id = authenticate()
-    if isinstance(user_id, tuple): return user_id
+    if isinstance(user_id, tuple): 
+        return user_id  
 
     with next(get_db()) as db:
         stmt = (
             select(Note)
             .where(Note.user_id == user_id, Note.is_archived == False)
-            .options(joinedload(Note.tags))
+            .options(joinedload(Note.tags))  # eager-load tags
             .order_by(desc(Note.created_at))
         )
-        notes = db.execute(stmt).scalars().all() 
+        
+        notes = db.execute(stmt).unique().scalars().all()
 
-        # Clean serialization
         return jsonify({
             "notes": [n.to_dict() for n in notes]
         }), 200
+
 
 
 @notes_bp.route('/notes/<int:note_id>', methods=['GET'])
@@ -76,7 +76,54 @@ def get_note(note_id):
             "note": note.to_dict()
         }), 200
 
-# ... (All other note/tag routes like update_note, delete_note, search_notes,
-# filter_notes, create_tag, get_tags, update_tag, delete_tag, add_tags_to_note,
-# remove_tag_from_note, archive_note, unarchive_note, and get_archived_notes
-# are moved here, with @app.route replaced by @notes_bp.route, and using to_dict()) ...
+
+
+@notes_bp.route('/notes/<int:note_id>', methods=['PUT'])
+def update_note(note_id):
+    user_id = authenticate()
+    if isinstance(user_id, tuple):
+        return user_id
+
+    data = request.get_json()
+    title = data.get('title')
+    content = data.get('content')
+
+    with next(get_db()) as db:
+        
+        stmt = select(Note).where(Note.id == note_id, Note.user_id == user_id)
+        note = db.execute(stmt).scalars().first()
+
+        if not note:
+            return jsonify({"error": "Note not found"}), 404
+
+        
+        if title:
+            note.title = title
+        if content is not None:
+            note.content = content
+
+       
+        note.updated_at = datetime.utcnow()
+
+        db.commit()
+
+        return jsonify({"message": "Note updated", "note": note.to_dict()}), 200
+    
+
+@notes_bp.route('/notes/<int:note_id>', methods=['DELETE'])
+def delete_note(note_id):
+    user_id = authenticate()
+    if isinstance(user_id, tuple):
+        return user_id
+
+    with next(get_db()) as db:
+        stmt = select(Note).where(Note.id == note_id, Note.user_id == user_id)
+        note = db.execute(stmt).scalars().first()
+
+        if not note:
+            return jsonify({"error": "Note not found"}), 404
+
+        db.delete(note)
+        db.commit()
+
+        return jsonify({"message": "Note deleted"}), 200    

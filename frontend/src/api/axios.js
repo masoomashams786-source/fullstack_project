@@ -1,14 +1,17 @@
+
 import axios from "axios";
 
+
 const api = axios.create({
-  baseURL: "http://localhost:5000", // <-- Make sure this points to your Flask backend
+  baseURL: "/api", 
   headers: {
     "Content-Type": "application/json",
   },
 });
 
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token"); 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

@@ -10,11 +10,13 @@ import { Provider } from "@/components/ui/provider"
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <AuthProvider>
+      
     <Provider>
+      <AuthProvider>
       <App />
-    </Provider>
       </AuthProvider>
+    </Provider>
+      
     </BrowserRouter>
   </React.StrictMode>
 );
