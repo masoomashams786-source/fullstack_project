@@ -6,7 +6,7 @@ from datetime import datetime
 class Base(DeclarativeBase):
     pass
 
-# Association table for many-to-many relationship between Notes and Tags
+
 note_tags = Table(
     'note_tags',
     Base.metadata,
@@ -77,7 +77,7 @@ class Tag(Base):
     notes: Mapped[list["Note"]] = relationship("Note", secondary=note_tags, back_populates="tags")
 
     def to_dict(self):
-        """Converts Tag object to a dictionary for API response."""
+        
         return {
             "id": self.id,
             "name": self.name
