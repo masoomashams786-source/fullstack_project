@@ -19,7 +19,7 @@ export default function PrivateLayout() {
         px={6}
         py={4}
       >
-        <Heading size="md">Welcome</Heading>
+        <Heading size="md">Welcome to you app</Heading>
         <Button colorScheme="teal" variant="Surface" 
         colorPalette={"teal"}
         onClick={logout}>
