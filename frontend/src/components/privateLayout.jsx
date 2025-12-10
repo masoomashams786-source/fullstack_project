@@ -1,17 +1,17 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
 import { Box, Flex, VStack, Heading, Button } from "@chakra-ui/react";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { AuthContext } from "../pages/auth-context";
 import Sidebar from "./sidebar";
 
 
 export default function PrivateLayout() {
   const { user, logout } = useContext(AuthContext);
+  const [view, setView] = useState("all-notes");
 
   return (
     <Flex minH="100vh" direction="column">
-      
       <Flex
         as="header"
         bg="teal.600"
@@ -21,26 +21,18 @@ export default function PrivateLayout() {
         px={6}
         py={4}
       >
-        <Heading size="md">Welcome to you app
-, {user?.name}!
-
-
-        </Heading>
+        <Heading size="md">Welcome to your app {user?.name}!</Heading>
         
-        <Button colorPalette="gray" variant="surface" 
-        
-        onClick={logout}>
+        <Button colorPalette="gray" variant="surface" onClick={logout}>
           Logout
         </Button>
       </Flex>
 
-      
-       <Flex minH="100vh">
-      <Sidebar />                         {/* left column */}
-      <Box flex="1" bg="gray.50" p={6}>   {/* right column */}
-        <Outlet />
-      </Box>
-    </Flex>
+      <Flex flex="1">
+        <Sidebar onSelect={setView} />                                <Box flex="1" bg="gray.50" p={6}>  
+          <Outlet context={{ view, setView }} />
+        </Box>
+      </Flex>
 
       {/* Footer */}
       <Box as="footer" textAlign="center" py={4} bg="gray.200">

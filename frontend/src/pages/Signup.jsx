@@ -27,7 +27,12 @@ function Signup() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Trim whitespace for username & email (prevents backend errors)
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === "password" ? value : value.trim(),
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -36,47 +41,83 @@ function Signup() {
     setSuccess("");
     setLoading(true);
 
-    if (!formData.username || !formData.email || !formData.password) {
+    const { username, email, password } = formData;
+
+    // 1️Empty fields
+    if (!username || !email || !password) {
       setError("All fields are required.");
       setLoading(false);
       return;
     }
-    if (formData.username.length < 3 || formData.username.length > 20) {
-        setError("Username must be between 3 and 20 characters."); 
-        setLoading(false);
-        return;
+
+    // 2️ Username length
+    if (username.length < 3 || username.length > 20) {
+      setError("Username must be between 3 and 20 characters.");
+      setLoading(false);
+      return;
     }
-    
+
+    // 3️ Username character rules (matches backend)
+    const usernameRegex = /^[a-zA-Z0-9._-]+$/;
+    if (!usernameRegex.test(username)) {
+      setError(
+        "Username can only contain letters, numbers, underscore (_), dot (.), or hyphen (-)."
+      );
+      setLoading(false);
+      return;
+    }
+
+    // 4️ Email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
+    if (!emailRegex.test(email)) {
       setError("Please enter a valid email address.");
       setLoading(false);
       return;
     }
-    
 
-    if (formData.password.length < 8) {
+    // 5️ Password length
+    if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       setLoading(false);
       return;
     }
 
     try {
-      const res = await api.post("/signup", formData);
+      const res = await api.post("/signup", {
+        username,
+        email,
+        password,
+      });
+
       setSuccess(res.data.message || "Signup successful!");
+
       setFormData({ username: "", email: "", password: "" });
+
       setTimeout(() => {
         navigate("/login");
       }, 1500);
     } catch (err) {
-      setError(err.response?.data?.error || "Signup failed.");
-    }finally {
+      setError(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Signup failed."
+      );
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box p={8} borderWidth="1px" borderRadius="md" maxW="500px" mx="auto" mt="70px" boxShadow="lg" bg="whiteAlpha.100">
+    <Box
+      p={8}
+      borderWidth="1px"
+      borderRadius="md"
+      maxW="500px"
+      mx="auto"
+      mt="70px"
+      boxShadow="lg"
+      bg="whiteAlpha.100"
+    >
       <form onSubmit={handleSubmit}>
         <Fieldset.Root size="lg" maxW="md">
           <Stack spacing={4}>
@@ -108,7 +149,6 @@ function Signup() {
                 placeholder="Your username"
                 value={formData.username}
                 onChange={handleChange}
-                required
                 disabled={loading}
               />
             </Field.Root>
@@ -121,7 +161,6 @@ function Signup() {
                 placeholder="you@example.com"
                 value={formData.email}
                 onChange={handleChange}
-                required
                 disabled={loading}
               />
             </Field.Root>
@@ -134,15 +173,14 @@ function Signup() {
                 placeholder="Enter password"
                 value={formData.password}
                 onChange={handleChange}
-                required
                 disabled={loading}
               />
             </Field.Root>
           </Fieldset.Content>
 
           <Button type="submit" mt={4} colorScheme="blue" disabled={loading}>
-  {loading ? <Spinner size="sm" /> : "Sign Up"}
-</Button>
+            {loading ? <Spinner size="sm" /> : "Sign Up"}
+          </Button>
         </Fieldset.Root>
       </form>
     </Box>

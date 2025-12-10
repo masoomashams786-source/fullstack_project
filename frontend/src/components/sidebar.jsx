@@ -35,11 +35,11 @@ export default function Sidebar({ collapsed = false, onSelect }) {
 
           {/* Section 1: All Notes & New Note */}
           <Stack spacing={1} mt={4}>
-            <Button variant="ghost" justifyContent={collapsed ? "center" : "flex-start"} onClick={() => onSelect("all")}>
+            <Button variant="ghost" justifyContent={collapsed ? "center" : "flex-start"} onClick={() => onSelect("all-notes")}>
               <Icon as={FiFileText} boxSize={5} />
               {!collapsed && <Text ml={3}>All Notes</Text>}
             </Button>
-            <Button variant="ghost" justifyContent={collapsed ? "center" : "flex-start"} onClick={() => onSelect("new")}>
+            <Button variant="ghost" justifyContent={collapsed ? "center" : "flex-start"} onClick={() => onSelect("new-note")}>
               <Icon as={FiPlus} boxSize={5} />
               {!collapsed && <Text ml={3}>New Note</Text>}
             </Button>
@@ -51,7 +51,7 @@ export default function Sidebar({ collapsed = false, onSelect }) {
           
          <Flex align="center" ml={3} mb={2} pl={collapsed ? 0 : 3}>
   <Icon as={FiTag} boxSize={5} />
-  {!collapsed && <Text ml={2} fontSize="sm" fontWeight="bold">Tags</Text>}
+  {!collapsed && <Text ml={4} fontSize="sm" fontWeight="bold">Tags</Text>}
 </Flex>
 
           <Stack spacing={1} pl={collapsed ? 0 : 3}>
