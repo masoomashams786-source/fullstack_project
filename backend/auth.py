@@ -9,6 +9,7 @@ from .database import get_db
 from .models import User, RevokedToken
 from .utils import get_user_id_from_token
 from .schemas import SignupSchema
+import json
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -37,7 +38,7 @@ def signup():
     try:
         payload = SignupSchema(**data)
     except ValidationError as e:
-        return jsonify({"errors": e.errors()}), 400
+        return jsonify({"errors": json.loads(e.json())}), 400
 
     # Normalize/prepare values
     username = payload.username.strip()
