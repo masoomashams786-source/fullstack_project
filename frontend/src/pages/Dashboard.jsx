@@ -25,10 +25,11 @@ import {
 
 import { Toaster, toaster } from "@/components/ui/toaster";
 import api from "../api/axios";
-import Tags from "../components/tags.jsx";
+import Tags from "../components/Tags";
+
 
 export default function Dashboard() {
-  const { view, setView } = useOutletContext(); // ✅ Correct use of outlet context
+  const { view, setView } = useOutletContext(); 
   const [notes, setNotes] = useState([]);
 
   
@@ -183,7 +184,7 @@ export default function Dashboard() {
 
   return (
     <Box minH="100vh" bg="gray.50" py={10}>
-      <Tags />
+     
       <Toaster />
 
       <Container maxW="container.lg">
@@ -331,6 +332,8 @@ export default function Dashboard() {
             </>
           )}
         </Stack>
+        <Tags />
+
       </Container>
     </Box>
   );

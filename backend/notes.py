@@ -9,11 +9,13 @@ from datetime import datetime, timedelta
 from .database import get_db
 from .models import Note, Tag
 from .auth import authenticate # Import the helper from the new auth file
+from flask_cors import cross_origin
 
 
-notes_bp = Blueprint('notes', __name__)
+notes_bp = Blueprint('notes', __name__, url_prefix="/notes")
 
 @notes_bp.route('/notes', methods=['POST'])
+@cross_origin()
 def create_note():
     user_id = authenticate()
     if isinstance(user_id, tuple): return user_id

@@ -2,6 +2,7 @@ import React, { useContext } from "react";
 import { Button, Box, Stack, Flex, Icon, Text, Separator } from "@chakra-ui/react";
 import { FiFileText, FiPlus, FiTag, FiArchive, FiTrash, FiLogOut } from "react-icons/fi";
 import { AuthContext } from "../pages/auth-context";
+import { Link } from "react-router-dom";
 
 export default function Sidebar({ collapsed = false, onSelect }) {
   const { logout } = useContext(AuthContext);
@@ -35,7 +36,7 @@ export default function Sidebar({ collapsed = false, onSelect }) {
 
           {/* Section 1: All Notes & New Note */}
           <Stack spacing={1} mt={4}>
-            <Button variant="ghost" justifyContent={collapsed ? "center" : "flex-start"} onClick={() => onSelect("all-notes")}>
+            <Button as={Link} to="/dashboard" variant="ghost" justifyContent={collapsed ? "center" : "flex-start"}>
               <Icon as={FiFileText} boxSize={5} />
               {!collapsed && <Text ml={3}>All Notes</Text>}
             </Button>
