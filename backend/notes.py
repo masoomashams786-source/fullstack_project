@@ -9,30 +9,38 @@ from datetime import datetime, timedelta
 from .database import get_db
 from .models import Note, Tag
 from .auth import authenticate # Import the helper from the new auth file
-from flask_cors import cross_origin
 
 
-notes_bp = Blueprint('notes', __name__, url_prefix="/notes")
 
-@notes_bp.route('/notes', methods=['POST'])
-@cross_origin()
+notes_bp = Blueprint('notes', __name__)
+
+@notes_bp.route('/notes', methods=["POST"])
 def create_note():
     user_id = authenticate()
-    if isinstance(user_id, tuple): return user_id
+    if isinstance(user_id, tuple):
+        return user_id
 
     data = request.get_json()
-    title = data.get('title')
-    content = data.get('content', '')
+    title = data.get("title", "").strip()
+    content = data.get("content", "").strip()
+    tag_ids = data.get("tag_ids", [])  # NEW: list of tag IDs
 
     if not title:
         return jsonify({"error": "Title is required"}), 400
 
     with next(get_db()) as db:
-        new_note = Note(title=title, content=content, user_id=user_id)
-        db.add(new_note)
+        note = Note(title=title, content=content, user_id=user_id)
+
+        # Add tags if provided
+        if tag_ids:
+            stmt = select(Tag).where(Tag.id.in_(tag_ids), Tag.user_id == user_id)
+            tags = db.execute(stmt).scalars().all()
+            note.tags = tags
+
+        db.add(note)
         db.commit()
-        # Clean serialization
-        return jsonify({"message": "Note created", "note": new_note.to_dict()}), 201
+
+        return jsonify({"message": "Note created", "note": note.to_dict()}), 201
 
 
 @notes_bp.route('/notes', methods=['GET'])

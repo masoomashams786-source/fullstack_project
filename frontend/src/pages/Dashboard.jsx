@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
-
 import {
   Box,
   Button,
@@ -9,51 +8,38 @@ import {
   Input,
   Textarea,
   SimpleGrid,
-  Card,
-  CardBody,
-  CardHeader,
-  CardFooter,
-  Text,
-  Separator,
-  Badge,
-  Skeleton,
-  SkeletonText,
   Stack,
+  Text,
+  Skeleton,
   Alert,
   HStack,
+  Badge,
 } from "@chakra-ui/react";
-
 import { Toaster, toaster } from "@/components/ui/toaster";
 import api from "../api/axios";
+import NoteForm from "@/components/NoteForm";
 import Tags from "../components/Tags";
-
+import NoteCard from "../components/NoteCard";
 
 export default function Dashboard() {
-  const { view, setView } = useOutletContext(); 
+  const { view } = useOutletContext();
+
+  // Notes state
   const [notes, setNotes] = useState([]);
+  const [isFetching, setIsFetching] = useState(true);
+  const [pageError, setPageError] = useState(null);
 
-  
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-
-  // Edit state
+  // Editing notes
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editError, setEditError] = useState(null);
-
-  // Loading & error states
-  const [isFetching, setIsFetching] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
   const [operatingId, setOperatingId] = useState(null);
-  const [pageError, setPageError] = useState(null);
 
   /* ------------------ Helpers ------------------ */
-
-  const handleApiError = (error, action) => {
-    console.error(action, error);
-
-    if (error.response?.status === 401) {
+  const apiError = (err, action) => {
+    console.error(err);
+    if (err.response?.status === 401) {
       toaster.create({
         title: "Session Expired",
         description: "Please log in again.",
@@ -63,31 +49,27 @@ export default function Dashboard() {
       setTimeout(() => window.location.reload(), 1500);
       return;
     }
-
     toaster.create({
       title: `Failed to ${action}`,
-      description:
-        error.response?.data?.message ||
-        "Something went wrong. Please try again.",
+      description: err.response?.data?.error || "Something went wrong.",
       type: "error",
     });
   };
 
-  const notifySuccess = (title, description) => {
-    toaster.create({ title, description, type: "success" });
+  const success = (msg) => {
+    toaster.create({ title: msg, type: "success" });
   };
 
   /* ------------------ API ------------------ */
-
   const fetchNotes = async () => {
     setIsFetching(true);
     setPageError(null);
     try {
-      const res = await api.get("/notes");
+      const res = await api.get("/notes"); // No trailing slash
       setNotes(res.data.notes);
     } catch (err) {
       setPageError("Unable to load notes.");
-      handleApiError(err, "fetch notes");
+      apiError(err, "fetch notes");
     } finally {
       setIsFetching(false);
     }
@@ -97,27 +79,23 @@ export default function Dashboard() {
     fetchNotes();
   }, []);
 
-  const createNote = async (e) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      toaster.create({ title: "Title is required", type: "warning" });
-      return;
-    }
+  useEffect(() => {
+    if (view === "all-notes") fetchNotes();
+  }, [view]);
 
-    setIsCreating(true);
+  /* ------------------ NoteForm Integration ------------------ */
+  const handleCreateNote = async ({ title, content, tag_ids }) => {
+    if (!title.trim()) return;
     try {
-      const res = await api.post("/notes", { title, content });
+      const res = await api.post("/notes", { title, content, tag_ids });
       setNotes((prev) => [res.data.note, ...prev]);
-      setTitle("");
-      setContent("");
-      notifySuccess("Note Created");
+      success("Note Created");
     } catch (err) {
-      handleApiError(err, "create note");
-    } finally {
-      setIsCreating(false);
+      apiError(err, "create note");
     }
   };
 
+  /* ------------------ Editing Notes ------------------ */
   const startEdit = (note) => {
     setEditingNoteId(note.id);
     setEditTitle(note.title);
@@ -130,27 +108,24 @@ export default function Dashboard() {
     setEditError(null);
   };
 
-  const editNote = async (id) => {
+  const updateNote = async (id) => {
     if (!editTitle.trim()) {
       setEditError("Title cannot be empty");
       return;
     }
-
     setOperatingId(id);
     try {
       const res = await api.put(`/notes/${id}`, {
         title: editTitle,
         content: editContent,
       });
-
       setNotes((prev) =>
         prev.map((n) => (n.id === id ? res.data.note : n))
       );
-
+      success("Note Updated");
       setEditingNoteId(null);
-      notifySuccess("Note Updated");
     } catch (err) {
-      handleApiError(err, "update note");
+      apiError(err, "update note");
     } finally {
       setOperatingId(null);
     }
@@ -158,182 +133,116 @@ export default function Dashboard() {
 
   const deleteNote = async (id) => {
     if (!window.confirm("Delete this note?")) return;
-
     setOperatingId(id);
     try {
       await api.delete(`/notes/${id}`);
       setNotes((prev) => prev.filter((n) => n.id !== id));
-      notifySuccess("Note Deleted");
+      success("Note Deleted");
     } catch (err) {
-      handleApiError(err, "delete note");
+      apiError(err, "delete note");
     } finally {
       setOperatingId(null);
     }
   };
 
-  /* ------------------ UI ------------------ */
-
-  const WelcomeScreen = () => (
+  /* ------------------ UI Blocks ------------------ */
+  const Welcome = () => (
     <Box textAlign="center" py={24} color="gray.600">
-      <Heading color="teal.600" mb={4}>
-        Welcome back 👋
-      </Heading>
-      <Text>Select something from the sidebar to begin.</Text>
+      <Heading color="teal.600" mb={4}>Welcome back 👋</Heading>
+      <p>Select something from the sidebar to begin.</p>
     </Box>
   );
 
+  const AllNotes = () => (
+    <>
+      {isFetching ? (
+        <SimpleGrid columns={{ md: 3 }} gap={6}>
+          {[1, 2, 3].map((i) => (
+            <Box key={i} p={4} shadow="md" borderWidth="1px">
+              <Skeleton height="20px" mb={4} />
+              <Skeleton height="60px" />
+            </Box>
+          ))}
+        </SimpleGrid>
+      ) : (
+        <>
+          <SimpleGrid columns={{ md: 3 }} gap={6}>
+            {notes.map((note) => (
+              <Box key={note.id} p={4} shadow="md" borderWidth="1px" borderRadius="md">
+                {editingNoteId === note.id ? (
+                  <Stack gap={2}>
+                    <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                    <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} />
+                    {editError && (
+                      <Alert status="error">{editError}</Alert>
+                    )}
+                  </Stack>
+                ) : (
+                  <>
+                    <Heading size="md" color="teal.700">{note.title}</Heading>
+                    <Text noOfLines={4}>{note.content}</Text>
+                    <Badge mt={2}>{new Date(note.created_at).toLocaleDateString()}</Badge>
+                  </>
+                )}
+                <HStack mt={2} justify="flex-end">
+                  {editingNoteId === note.id ? (
+                    <>
+                      <Button
+                        size="sm"
+                        colorPalette="green"
+                        onClick={() => updateNote(note.id)}
+                        isLoading={operatingId === note.id}
+                      >Save</Button>
+                      <Button size="sm" onClick={cancelEdit}>Cancel</Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="surface"
+                        colorPalette="teal"
+                        onClick={() => startEdit(note)}
+                      >Edit</Button>
+                      <Button
+                        size="sm"
+                        variant="surface"
+                        colorPalette="red"
+                        onClick={() => deleteNote(note)}
+                      >Delete</Button>
+                    </>
+                  )}
+                </HStack>
+              </Box>
+            ))}
+          </SimpleGrid>
+          <Box mt={10}>
+            <Tags />
+          </Box>
+        </>
+      )}
+    </>
+  );
+
+  /* ------------------ Render ------------------ */
   return (
     <Box minH="100vh" bg="gray.50" py={10}>
-     
       <Toaster />
-
       <Container maxW="container.lg">
-        <tags />  
-        <Stack gap={8} align="stretch">
-          {/* Header */}
+        <Stack gap={8}>
           <Box textAlign="center">
             <Heading color="teal.600">My Notes Dashboard</Heading>
             <Text color="gray.500">Manage your daily ideas</Text>
           </Box>
-
           {pageError && (
-            <Alert.Root status="error">
-              <Alert.Indicator />
-              <Alert.Description>
-                {pageError}{" "}
-                <Button size="xs" variant="underline" onClick={fetchNotes}>
-                  Retry
-                </Button>
-              </Alert.Description>
-            </Alert.Root>
+            <Alert status="error">
+              {pageError}
+              <Button size="xs" variant="underline" onClick={fetchNotes}>Retry</Button>
+            </Alert>
           )}
-
-          {view === "welcome" && <WelcomeScreen />}
-
-          {view === "new-note" && (
-            <Card.Root>
-              <CardHeader>
-                <Heading size="md">Create Note</Heading>
-              </CardHeader>
-              <CardBody>
-                <form onSubmit={createNote}>
-                  <Stack gap={4}>
-                    <Input
-                      placeholder="Title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                    />
-                    <Textarea
-                      placeholder="Content"
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                    />
-                    <Button
-                      type="submit"
-                      colorScheme="teal"
-                      isLoading={isCreating}
-                    >
-                      Save
-                    </Button>
-                  </Stack>
-                </form>
-              </CardBody>
-            </Card.Root>
-          )}
-
-          {view === "all-notes" && (
-            <>
-              <Separator />
-
-              {isFetching ? (
-                <SimpleGrid columns={{ md: 3 }} gap={6}>
-                  {[1, 2, 3].map((i) => (
-                    <Card.Root key={i}>
-                      <CardBody>
-                        <Skeleton height="20px" mb={4} />
-                        <SkeletonText noOfLines={4} />
-                      </CardBody>
-                    </Card.Root>
-                  ))}
-                </SimpleGrid>
-              ) : (
-                <SimpleGrid columns={{ md: 3 }} gap={6}>
-                  {notes.map((note) => (
-                    <Card.Root key={note.id}>
-                      <CardBody>
-                        {editingNoteId === note.id ? (
-                          <Stack gap={2}>
-                            <Input
-                              value={editTitle}
-                              onChange={(e) => setEditTitle(e.target.value)}
-                            />
-                            <Textarea
-                              value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
-                            />
-                            {editError && (
-                              <Alert.Root status="error">
-                                <Alert.Indicator />
-                                <Alert.Description>
-                                  {editError}
-                                </Alert.Description>
-                              </Alert.Root>
-                            )}
-                          </Stack>
-                        ) : (
-                          <>
-                            <Heading color={"teal"} size="lg">{note.title}</Heading>
-                            <Text noOfLines={4}>{note.content}</Text>
-                            <Badge mt={2}>{new Date().toLocaleDateString()}</Badge>
-                          </>
-                        )}
-                      </CardBody>
-
-                      <CardFooter justify="end">
-                        {editingNoteId === note.id ? (
-                          <HStack>
-                            <Button
-                              size="sm"
-                              colorScheme="green"
-                              onClick={() => editNote(note.id)}
-                              isLoading={operatingId === note.id}
-                            >
-                              Save
-                            </Button>
-                            <Button size="sm" onClick={cancelEdit}>
-                              Cancel
-                            </Button>
-                          </HStack>
-                        ) : (
-                          <HStack>
-                            <Button
-                              size="sm"
-                              variant="surface"
-                              colorPalette="teal"
-                              onClick={() => startEdit(note)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="surface"
-                              colorPalette="red"
-                              onClick={() => deleteNote(note.id)}
-                            >
-                              Delete
-                            </Button>
-                          </HStack>
-                        )}
-                      </CardFooter>
-                    </Card.Root>
-                  ))}
-                </SimpleGrid>
-              )}
-            </>
-          )}
+          {view === "welcome" && <Welcome />}
+          {view === "new-note" && <NoteForm onSubmit={handleCreateNote} />}
+          {view === "all-notes" && <AllNotes />}
         </Stack>
-        <Tags />
-
       </Container>
     </Box>
   );

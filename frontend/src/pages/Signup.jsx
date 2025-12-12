@@ -27,8 +27,6 @@ function Signup() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    // Trim whitespace for username & email (prevents backend errors)
     setFormData((prev) => ({
       ...prev,
       [name]: name === "password" ? value : value.trim(),
@@ -43,21 +41,18 @@ function Signup() {
 
     const { username, email, password } = formData;
 
-    // 1️Empty fields
     if (!username || !email || !password) {
       setError("All fields are required.");
       setLoading(false);
       return;
     }
 
-    // 2️ Username length
     if (username.length < 3 || username.length > 20) {
       setError("Username must be between 3 and 20 characters.");
       setLoading(false);
       return;
     }
 
-    // 3️ Username character rules (matches backend)
     const usernameRegex = /^[a-zA-Z0-9._-]+$/;
     if (!usernameRegex.test(username)) {
       setError(
@@ -67,7 +62,6 @@ function Signup() {
       return;
     }
 
-    // 4️ Email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address.");
@@ -75,7 +69,6 @@ function Signup() {
       return;
     }
 
-    // 5️ Password length
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       setLoading(false);
@@ -83,25 +76,29 @@ function Signup() {
     }
 
     try {
-      const res = await api.post("/signup", {
+      const res = await api.post("/auth/signup", {
         username,
         email,
         password,
       });
 
       setSuccess(res.data.message || "Signup successful!");
-
       setFormData({ username: "", email: "", password: "" });
 
-      setTimeout(() => {
-        navigate("/login");
-      }, 1500);
+      setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
-      setError(
-        err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Signup failed."
-      );
+      // Handle backend errors
+      if (err.response?.data?.errors) {
+        // Pydantic validation errors
+        const validationErrors = err.response.data.errors
+          .map((e) => Object.values(e)[0])
+          .join(" ");
+        setError(validationErrors);
+      } else if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError("Signup failed.");
+      }
     } finally {
       setLoading(false);
     }

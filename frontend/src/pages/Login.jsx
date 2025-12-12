@@ -38,7 +38,7 @@ function Login() {
     }
 
     try {
-      const res = await api.post("login", formData);
+      const res = await api.post("auth/login", formData);
 
       // Store token in AuthContext
       authContext.login({ user: { email: formData.email }, token: res.data.token });

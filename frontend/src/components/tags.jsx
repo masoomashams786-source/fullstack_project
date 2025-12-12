@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Box, Heading, Field, Input, Button, Text } from "@chakra-ui/react";
 import api from "../api/axios"; 
+
 function Tags() {
   const [tags, setTags] = useState([]);
   const [newTag, setNewTag] = useState("");

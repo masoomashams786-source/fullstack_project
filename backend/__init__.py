@@ -9,10 +9,20 @@ from flask_cors import CORS
 # -----------------------------
 # Flask app
 # -----------------------------
+from flask_cors import CORS
+ 
 app = Flask(__name__)
 CORS(app)
 
+CORS(
+    app,
+    resources={r"/api/*": {"origins": "*"}},
+    supports_credentials=True
+)
 
+
+
+# Test route
 @app.route("/ping")
 def ping():
     return {"message": "pong from backend"}
@@ -24,8 +34,6 @@ app.register_blueprint(auth_bp, url_prefix="/api")
 app.register_blueprint(notes_bp, url_prefix="/api")
 app.register_blueprint(tag_bp, url_prefix="/api")
 
-
-
+# Create tables
 with engine.begin() as conn:
     Base.metadata.create_all(conn)
-

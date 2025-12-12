@@ -6,7 +6,7 @@ from .database import get_db
 from .models import Tag
 from .auth import authenticate
 
-tag_bp = Blueprint('tags', __name__, url_prefix="/tags")
+tag_bp = Blueprint('tags', __name__)
 
 
 

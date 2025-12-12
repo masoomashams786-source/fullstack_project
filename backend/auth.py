@@ -30,40 +30,60 @@ def authenticate():
 # -----------------------------
 # Signup Route
 # -----------------------------
-@auth_bp.route('/signup', methods=['POST'])
+@auth_bp.route('/auth/signup', methods=['POST'])
 def signup():
+    # 1️⃣ Get JSON payload
     data = request.get_json() or {}
+    print("SIGNUP PAYLOAD:", data)  # Optional debug print
 
-    # Validate incoming JSON via Pydantic schema
+    # 2️⃣ Validate with Pydantic
     try:
         payload = SignupSchema(**data)
     except ValidationError as e:
+        print("VALIDATION FAILED:", e.json())  # Optional debug print
         return jsonify({"errors": json.loads(e.json())}), 400
 
-    # Normalize/prepare values
     username = payload.username.strip()
     email = payload.email.strip().lower()
     password = payload.password
 
-    with next(get_db()) as db:
+    # 3️⃣ Get DB session
+    db = next(get_db())
+
+    try:
+        # 4️⃣ Check if user already exists
         stmt = select(User).where(or_(User.username == username, User.email == email))
         existing_user = db.execute(stmt).scalars().first()
         if existing_user:
+            print("USER EXISTS:", existing_user.username, existing_user.email)  # Optional
             return jsonify({"error": "Username or email already exists"}), 400
 
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        new_user = User(username=username, email=email, password=hashed_password.decode('utf-8'))
+        # 5️⃣ Hash password
+        hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
 
+        # 6️⃣ Create new user
+        new_user = User(
+            username=username,
+            email=email,
+            password=hashed_password.decode("utf-8")
+        )
         db.add(new_user)
         db.commit()
+        db.refresh(new_user)
 
-        return jsonify({"message": "User created successfully", "user": new_user.to_dict()}), 201
+        # 7️⃣ Return success response
+        return jsonify({
+            "message": "User created successfully",
+            "user": new_user.to_dict()
+        }), 201
 
+    finally:
+        db.close()
 
 # -----------------------------
 # Login Route
 # -----------------------------
-@auth_bp.route('/login', methods=['POST'])
+@auth_bp.route('/auth/login', methods=['POST'])
 def login():
     data = request.get_json()
     email = data.get('email', '').strip()

@@ -1,13 +1,27 @@
 import React, { useContext } from "react";
-import { Button, Box, Stack, Flex, Icon, Text, Separator } from "@chakra-ui/react";
-import { FiFileText, FiPlus, FiTag, FiArchive, FiTrash, FiLogOut } from "react-icons/fi";
+import {
+  Button,
+  Box,
+  Stack,
+  Flex,
+  Icon,
+  Text,
+  Separator,
+} from "@chakra-ui/react";
+import {
+  FiFileText,
+  FiPlus,
+  FiTag,
+  FiArchive,
+  FiTrash,
+  FiLogOut,
+} from "react-icons/fi";
 import { AuthContext } from "../pages/auth-context";
 import { Link } from "react-router-dom";
 
 export default function Sidebar({ collapsed = false, onSelect }) {
   const { logout } = useContext(AuthContext);
 
- 
   const tags = ["Work", "Study", "Personal"];
 
   return (
@@ -25,22 +39,42 @@ export default function Sidebar({ collapsed = false, onSelect }) {
       transition="width 0.2s ease-in-out"
     >
       <Stack height="full" justify="space-between" align="stretch">
-        
         <Stack>
           {/* Brand */}
-          <Flex px={2} py={2} justify={collapsed ? "center" : "flex-start"} align="center" h="40px">
-            <Text fontSize="lg" fontWeight="bold" color="teal.600" whiteSpace="nowrap">
+          <Flex
+            px={2}
+            py={2}
+            justify={collapsed ? "center" : "flex-start"}
+            align="center"
+            h="40px"
+          >
+            <Text
+              fontSize="lg"
+              fontWeight="bold"
+              color="teal.600"
+              whiteSpace="nowrap"
+            >
               {!collapsed ? "MyNotes" : "MN"}
             </Text>
           </Flex>
 
           {/* Section 1: All Notes & New Note */}
           <Stack spacing={1} mt={4}>
-            <Button as={Link} to="/dashboard" variant="ghost" justifyContent={collapsed ? "center" : "flex-start"}>
+            <Button
+              as={Link}
+              to="/dashboard"
+              variant="ghost"
+              justifyContent={collapsed ? "center" : "flex-start"}
+               onClick={() => onSelect("all-notes")}
+            >
               <Icon as={FiFileText} boxSize={5} />
               {!collapsed && <Text ml={3}>All Notes</Text>}
             </Button>
-            <Button variant="ghost" justifyContent={collapsed ? "center" : "flex-start"} onClick={() => onSelect("new-note")}>
+            <Button
+              variant="ghost"
+              justifyContent={collapsed ? "center" : "flex-start"}
+              onClick={() => onSelect("new-note")}
+            >
               <Icon as={FiPlus} boxSize={5} />
               {!collapsed && <Text ml={3}>New Note</Text>}
             </Button>
@@ -49,18 +83,25 @@ export default function Sidebar({ collapsed = false, onSelect }) {
           <Separator my={4} borderColor="gray.200" />
 
           {/* Section 2: Tags */}
-          
-         <Flex align="center" ml={3} mb={2} pl={collapsed ? 0 : 3}>
-  <Icon as={FiTag} boxSize={5} />
-  {!collapsed && <Text ml={4} fontSize="sm" fontWeight="bold">Tags</Text>}
-</Flex>
+
+          <Flex align="center" ml={3} mb={2} pl={collapsed ? 0 : 3}>
+            <Icon as={FiTag} boxSize={5} />
+            {!collapsed && (
+              <Text ml={4} fontSize="sm" fontWeight="bold">
+                Tags
+              </Text>
+            )}
+          </Flex>
 
           <Stack spacing={1} pl={collapsed ? 0 : 3}>
             {tags.map((tag) => (
-              <Button key={tag} variant="ghost" justifyContent={collapsed ? "center" : "flex-start"} onClick={() => onSelect(`tag-${tag.toLowerCase()}`)}>
-                 
+              <Button
+                key={tag}
+                variant="ghost"
+                justifyContent={collapsed ? "center" : "flex-start"}
+                onClick={() => onSelect(`tag-${tag.toLowerCase()}`)}
+              >
                 <Text>{!collapsed && `• ${tag}`}</Text>
-
               </Button>
             ))}
           </Stack>
@@ -69,21 +110,33 @@ export default function Sidebar({ collapsed = false, onSelect }) {
 
           {/* Section 3: Archived & Trash */}
           <Stack spacing={1} pl={collapsed ? 0 : 3}>
-            <Button variant="ghost" justifyContent={collapsed ? "center" : "flex-start"} onClick={() => onSelect("archived")}>
+            <Button
+              variant="ghost"
+              justifyContent={collapsed ? "center" : "flex-start"}
+              onClick={() => onSelect("archived")}
+            >
               <Icon as={FiArchive} boxSize={5} />
               {!collapsed && <Text ml={3}> Archived</Text>}
             </Button>
-            <Button variant="ghost" justifyContent={collapsed ? "center" : "flex-start"} onClick={() => onSelect("trash")}>
+            <Button
+              variant="ghost"
+              justifyContent={collapsed ? "center" : "flex-start"}
+              onClick={() => onSelect("trash")}
+            >
               <Icon as={FiTrash} boxSize={5} />
               {!collapsed && <Text ml={3}>Trash</Text>}
             </Button>
           </Stack>
         </Stack>
 
-        
         <Box>
           <Separator mb={4} borderColor="gray.200" />
-          <Button variant="ghost" width="full" justifyContent={collapsed ? "center" : "flex-start"} onClick={logout}>
+          <Button
+            variant="ghost"
+            width="full"
+            justifyContent={collapsed ? "center" : "flex-start"}
+            onClick={logout}
+          >
             <Icon as={FiLogOut} boxSize={5} />
             {!collapsed && <Text ml={3}>Logout</Text>}
           </Button>
