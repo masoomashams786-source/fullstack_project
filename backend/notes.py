@@ -137,6 +137,50 @@ def delete_note(note_id):
         db.commit()
 
         return jsonify({"message": "Note deleted"}),200
+    
+
+
+@notes_bp.route("/notes/<int:note_id>/tags", methods=["POST", "OPTIONS"])
+def add_tag_to_note(note_id):
+    user_id = authenticate()
+    if isinstance(user_id, tuple):
+        return user_id
+
+    data = request.get_json()
+    tag_id = data.get("tag_id")
+
+    if not tag_id:
+        return jsonify({"error": "tag_id is required"}), 400
+
+    with next(get_db()) as db:
+        # Get note
+        note = db.execute(
+            select(Note).where(Note.id == note_id, Note.user_id == user_id)
+        ).scalars().first()
+
+        if not note:
+            return jsonify({"error": "Note not found"}), 404
+
+        # Get tag
+        tag = db.execute(
+            select(Tag).where(Tag.id == tag_id, Tag.user_id == user_id)
+        ).scalars().first()
+
+        if not tag:
+            return jsonify({"error": "Tag not found"}), 404
+
+        # Avoid duplicate
+        if tag in note.tags:
+            return jsonify({"error": "Tag already attached"}), 400
+
+        note.tags.append(tag)
+        db.commit()
+
+        return jsonify({
+            "message": "Tag attached to note",
+            "tag": tag.to_dict()
+        }), 200
+
         
         
         

@@ -74,6 +74,7 @@ export default function NoteForm({ onSubmit }) {
   // Submit note
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!title.trim()) {
       setError("Title cannot be empty");
       return;
@@ -82,19 +83,23 @@ export default function NoteForm({ onSubmit }) {
     const noteData = {
       title,
       content,
-      tag_ids: noteTags.map((t) => t.id), // match backend
+      tag_ids: noteTags.map((t) => t.id),
     };
 
     try {
-      await api.post("/notes", noteData); // FIX: no trailing slash
+      // Just pass the data to the parent (Dashboard)
+      if (onSubmit) {
+        await onSubmit(noteData);
+      }
+
+      // Clear form fields
       setTitle("");
       setContent("");
       setNoteTags([]);
       setError("");
-      if (onSubmit) onSubmit(noteData);
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.error || "Failed to create note");
+      setError("Failed to create note");
     }
   };
 

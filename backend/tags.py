@@ -66,11 +66,13 @@ def create_tag():
 
 
 
-@tag_bp.route('/tags/<int:tag_id>', methods=['PUT'])
+@tag_bp.route('/tags/<int:tag_id>', methods=['PUT', 'OPTIONS'])
 def update_tag(tag_id):
     user_id = authenticate()
     if isinstance(user_id, tuple):
         return user_id
+    if request.method == "OPTIONS":
+        return '', 204
 
     data = request.get_json()
     name = data.get('name', '').strip()

@@ -22,7 +22,7 @@ import Tags from "../components/Tags";
 import NoteCard from "../components/NoteCard";
 
 export default function Dashboard() {
-  const { view } = useOutletContext();
+  const { view, setView } = useOutletContext();
 
   // Notes state
   const [notes, setNotes] = useState([]);
@@ -31,10 +31,91 @@ export default function Dashboard() {
 
   // Editing notes
   const [editingNoteId, setEditingNoteId] = useState(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editContent, setEditContent] = useState("");
   const [editError, setEditError] = useState(null);
   const [operatingId, setOperatingId] = useState(null);
+
+  /* ------------------ Tag Handlers ------------------ */
+
+  const [allTags, setAllTags] = useState([]);
+  // Fetch all tags once
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const res = await api.get("/tags"); // GET all tags
+        setAllTags(res.data.tags); // save them to shared state
+      } catch (err) {
+        console.error("Failed to fetch tags:", err);
+      }
+    };
+    fetchTags();
+  }, []);
+
+  // Edit a tag (prompt for new name)
+  const handleEditTag = async (tagId, newName, noteId) => {
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
+    try {
+      const res = await api.put(`/tags/${tagId}`, { name: trimmedName });
+      const updatedTag = res.data.tag;
+
+      setAllTags((prevTags) =>
+        prevTags.map((tag) => (tag.id === tagId ? updatedTag : tag))
+      );
+
+      setNotes((prevNotes) =>
+        prevNotes.map((note) => ({
+          ...note,
+          tags: note.tags.map((t) => (t.id === tagId ? updatedTag : t)),
+        }))
+      );
+
+      success("Tag updated successfully!");
+    } catch (err) {
+      apiError(err, "update tag");
+    }
+  };
+
+  // Delete a tag
+  const handleDeleteTag = async (tagId, noteId) => {
+    try {
+      await api.delete(`/tags/${tagId}`);
+      setNotes((prev) =>
+        prev.map((note) =>
+          note.id === noteId
+            ? { ...note, tags: note.tags.filter((t) => t.id !== tagId) }
+            : note
+        )
+      );
+      success("Tag deleted");
+    } catch (err) {
+      apiError(err, "delete tag");
+    }
+  };
+
+  // Add a tag
+  const handleAddTag = async (noteId) => {
+    const tagName = window.prompt("Enter new tag name:");
+    if (!tagName || !tagName.trim()) return;
+
+    try {
+      const res = await api.post("/tags", { name: tagName, note_id: noteId });
+      const createdTag = res.data.tag;
+      setNotes((prev) =>
+        prev.map((note) =>
+          note.id === noteId
+            ? { ...note, tags: [...note.tags, createdTag] }
+            : note
+        )
+      );
+      setAllTags(prevTags => [...prevTags, createdTag]);
+
+
+      success("Tag added");
+    } catch (err) {
+      apiError(err, "add tag");
+    }
+  };
 
   /* ------------------ Helpers ------------------ */
   const apiError = (err, action) => {
@@ -79,17 +160,21 @@ export default function Dashboard() {
     fetchNotes();
   }, []);
 
-  useEffect(() => {
-    if (view === "all-notes") fetchNotes();
-  }, [view]);
-
   /* ------------------ NoteForm Integration ------------------ */
+
   const handleCreateNote = async ({ title, content, tag_ids }) => {
     if (!title.trim()) return;
+
     try {
       const res = await api.post("/notes", { title, content, tag_ids });
-      setNotes((prev) => [res.data.note, ...prev]);
-      success("Note Created");
+      // Update the local list with the new note
+      setNotes((prevNotes) => [res.data.note, ...prevNotes]);
+      success("Note Created and List Updated");
+
+      // Switch view to clear the form
+      if (setView) {
+        setView("all-notes");
+      }
     } catch (err) {
       apiError(err, "create note");
     }
@@ -98,8 +183,6 @@ export default function Dashboard() {
   /* ------------------ Editing Notes ------------------ */
   const startEdit = (note) => {
     setEditingNoteId(note.id);
-    setEditTitle(note.title);
-    setEditContent(note.content);
     setEditError(null);
   };
 
@@ -108,20 +191,18 @@ export default function Dashboard() {
     setEditError(null);
   };
 
-  const updateNote = async (id) => {
-    if (!editTitle.trim()) {
+  const updateNote = async (id, title, content) => {
+    if (!title.trim()) {
       setEditError("Title cannot be empty");
       return;
     }
     setOperatingId(id);
     try {
       const res = await api.put(`/notes/${id}`, {
-        title: editTitle,
-        content: editContent,
+        title,
+        content,
       });
-      setNotes((prev) =>
-        prev.map((n) => (n.id === id ? res.data.note : n))
-      );
+      setNotes((prev) => prev.map((n) => (n.id === id ? res.data.note : n)));
       success("Note Updated");
       setEditingNoteId(null);
     } catch (err) {
@@ -132,7 +213,6 @@ export default function Dashboard() {
   };
 
   const deleteNote = async (id) => {
-    if (!window.confirm("Delete this note?")) return;
     setOperatingId(id);
     try {
       await api.delete(`/notes/${id}`);
@@ -148,7 +228,9 @@ export default function Dashboard() {
   /* ------------------ UI Blocks ------------------ */
   const Welcome = () => (
     <Box textAlign="center" py={24} color="gray.600">
-      <Heading color="teal.600" mb={4}>Welcome back 👋</Heading>
+      <Heading color="teal.600" mb={4}>
+        Welcome back 👋
+      </Heading>
       <p>Select something from the sidebar to begin.</p>
     </Box>
   );
@@ -168,56 +250,25 @@ export default function Dashboard() {
         <>
           <SimpleGrid columns={{ md: 3 }} gap={6}>
             {notes.map((note) => (
-              <Box key={note.id} p={4} shadow="md" borderWidth="1px" borderRadius="md">
-                {editingNoteId === note.id ? (
-                  <Stack gap={2}>
-                    <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-                    <Textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} />
-                    {editError && (
-                      <Alert status="error">{editError}</Alert>
-                    )}
-                  </Stack>
-                ) : (
-                  <>
-                    <Heading size="md" color="teal.700">{note.title}</Heading>
-                    <Text noOfLines={4}>{note.content}</Text>
-                    <Badge mt={2}>{new Date(note.created_at).toLocaleDateString()}</Badge>
-                  </>
-                )}
-                <HStack mt={2} justify="flex-end">
-                  {editingNoteId === note.id ? (
-                    <>
-                      <Button
-                        size="sm"
-                        colorPalette="green"
-                        onClick={() => updateNote(note.id)}
-                        isLoading={operatingId === note.id}
-                      >Save</Button>
-                      <Button size="sm" onClick={cancelEdit}>Cancel</Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="surface"
-                        colorPalette="teal"
-                        onClick={() => startEdit(note)}
-                      >Edit</Button>
-                      <Button
-                        size="sm"
-                        variant="surface"
-                        colorPalette="red"
-                        onClick={() => deleteNote(note)}
-                      >Delete</Button>
-                    </>
-                  )}
-                </HStack>
-              </Box>
+              <NoteCard
+                key={note.id}
+                note={note}
+                onEdit={startEdit}
+                onDelete={deleteNote}
+                isEditing={editingNoteId === note.id}
+                allTags={allTags}
+                onUpdate={updateNote}
+                onCancel={cancelEdit}
+                operatingId={operatingId}
+                onEditTag={handleEditTag}
+                onDeleteTag={handleDeleteTag}
+                onAddTag={handleAddTag}
+                onAlertError={apiError}
+                onAlertSuccess={success}
+                setGlobalTags={setAllTags}
+              />
             ))}
           </SimpleGrid>
-          <Box mt={10}>
-            <Tags />
-          </Box>
         </>
       )}
     </>
@@ -236,7 +287,9 @@ export default function Dashboard() {
           {pageError && (
             <Alert status="error">
               {pageError}
-              <Button size="xs" variant="underline" onClick={fetchNotes}>Retry</Button>
+              <Button size="xs" variant="underline" onClick={fetchNotes}>
+                Retry
+              </Button>
             </Alert>
           )}
           {view === "welcome" && <Welcome />}
