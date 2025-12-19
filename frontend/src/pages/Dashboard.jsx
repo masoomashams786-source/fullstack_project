@@ -1,125 +1,111 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
   Box,
   Button,
   Container,
   Heading,
-  Input,
-  Textarea,
   SimpleGrid,
   Stack,
   Text,
   Skeleton,
   Alert,
-  HStack,
-  Badge,
+  Flex,
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import api from "../api/axios";
 import NoteForm from "@/components/NoteForm";
-import Tags from "../components/Tags";
-import NoteCard from "../components/NoteCard";
+import Sidebar from "@/components/sidebar";
+import SearchBar from "@/components/SearchBar";
+import WelcomeView from "@/components/notes/views/WelcomeView";
+import AllNotesView from "@/components/notes/views/AllNotesView";
+import ArchivedNotesView from "@/components/notes/views/ArchivedNotesView";
+import TrashNotesView from "@/components/notes/views/TrashNotesView";
+import useSWR, { mutate } from "swr";
+import { fetcher } from "../api/axios";
+import useSWRMutation from "swr/mutation";
+import { useAuth } from "./auth-context";
+
+/* ===================== DASHBOARD ===================== */
 
 export default function Dashboard() {
   const { view, setView } = useOutletContext();
 
-  // Notes state
-  const [notes, setNotes] = useState([]);
-  const [isFetching, setIsFetching] = useState(true);
-  const [pageError, setPageError] = useState(null);
+  const authData = useAuth();
+  console.log(authData)
 
-  // Editing notes
+  /* ------------------ Notes SWR ------------------ */
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: mutateNotes,
+  } = useSWR("/notes", fetcher);
+
+  const notes = data?.notes ?? [];
+
+  /* ------------------ Archived Notes SWR ------------------ */
+  const {
+    data: archivedData,
+    error: archivedError,
+    isLoading: isArchivedLoading,
+    mutate: mutateArchivedNotes,
+  } = useSWR("/notes/archived", fetcher);
+
+  const archivedNotes = archivedData?.notes ?? [];
+
+  /* ------------------ Trash Notes SWR ------------------ */
+  const {
+    data: trashData,
+    error: trashError,
+    isLoading: isTrashLoading,
+    mutate: mutateTrashNotes,
+  } = useSWR("/notes/trash", fetcher);
+
+  const trashNotes = trashData?.notes ?? [];
+
+  /* ------------------ Editing Notes ------------------ */
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editError, setEditError] = useState(null);
   const [operatingId, setOperatingId] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
+
+  /* ------------------ Tags ------------------ */
+  const [selectedTagIds, setSelectedTagIds] = useState([]);
+
+  /* ------------------ Search ------------------ */
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // ✅ SAFE DEFAULT so tagsResponse is never undefined
+  // Include tags from regular, archived, and trash notes
+  const allTags = useMemo(() => {
+    const tagMap = {};
+    [...notes, ...archivedNotes, ...trashNotes].forEach((note) => {
+      note.tags.forEach((tag) => {
+        if (!tagMap[tag.name]) tagMap[tag.name] = tag; // pick first instance
+      });
+    });
+    return Object.values(tagMap);
+  }, [notes, archivedNotes, trashNotes]);
 
   /* ------------------ Tag Handlers ------------------ */
-
-  const [allTags, setAllTags] = useState([]);
-  // Fetch all tags once
-  useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        const res = await api.get("/tags"); // GET all tags
-        setAllTags(res.data.tags); // save them to shared state
-      } catch (err) {
-        console.error("Failed to fetch tags:", err);
-      }
-    };
-    fetchTags();
-  }, []);
-
-  // Edit a tag (prompt for new name)
-  const handleEditTag = async (tagId, newName, noteId) => {
+  const handleEditTag = async (tagId, newName) => {
     const trimmedName = newName.trim();
     if (!trimmedName) return;
 
     try {
-      const res = await api.put(`/tags/${tagId}`, { name: trimmedName });
-      const updatedTag = res.data.tag;
-
-      setAllTags((prevTags) =>
-        prevTags.map((tag) => (tag.id === tagId ? updatedTag : tag))
-      );
-
-      setNotes((prevNotes) =>
-        prevNotes.map((note) => ({
-          ...note,
-          tags: note.tags.map((t) => (t.id === tagId ? updatedTag : t)),
-        }))
-      );
-
-      success("Tag updated successfully!");
+      await api.put(`/tags/${tagId}`, { name: trimmedName });
+      await mutateNotes();
+      success("Tag updated successfully");
     } catch (err) {
       apiError(err, "update tag");
-    }
-  };
-
-  // Delete a tag
-  const handleDeleteTag = async (tagId, noteId) => {
-    try {
-      await api.delete(`/tags/${tagId}`);
-      setNotes((prev) =>
-        prev.map((note) =>
-          note.id === noteId
-            ? { ...note, tags: note.tags.filter((t) => t.id !== tagId) }
-            : note
-        )
-      );
-      success("Tag deleted");
-    } catch (err) {
-      apiError(err, "delete tag");
-    }
-  };
-
-  // Add a tag
-  const handleAddTag = async (noteId) => {
-    const tagName = window.prompt("Enter new tag name:");
-    if (!tagName || !tagName.trim()) return;
-
-    try {
-      const res = await api.post("/tags", { name: tagName, note_id: noteId });
-      const createdTag = res.data.tag;
-      setNotes((prev) =>
-        prev.map((note) =>
-          note.id === noteId
-            ? { ...note, tags: [...note.tags, createdTag] }
-            : note
-        )
-      );
-      setAllTags(prevTags => [...prevTags, createdTag]);
-
-
-      success("Tag added");
-    } catch (err) {
-      apiError(err, "add tag");
     }
   };
 
   /* ------------------ Helpers ------------------ */
   const apiError = (err, action) => {
     console.error(err);
+
     if (err.response?.status === 401) {
       toaster.create({
         title: "Session Expired",
@@ -130,9 +116,10 @@ export default function Dashboard() {
       setTimeout(() => window.location.reload(), 1500);
       return;
     }
+
     toaster.create({
       title: `Failed to ${action}`,
-      description: err.response?.data?.error || "Something went wrong.",
+      description: err.response?.data?.error || "Something went wrong",
       type: "error",
     });
   };
@@ -141,46 +128,33 @@ export default function Dashboard() {
     toaster.create({ title: msg, type: "success" });
   };
 
-  /* ------------------ API ------------------ */
-  const fetchNotes = async () => {
-    setIsFetching(true);
-    setPageError(null);
-    try {
-      const res = await api.get("/notes"); // No trailing slash
-      setNotes(res.data.notes);
-    } catch (err) {
-      setPageError("Unable to load notes.");
-      apiError(err, "fetch notes");
-    } finally {
-      setIsFetching(false);
+  /* ------------------ Filter ------------------ */
+  const applyTagFilter = (tagIds) => {
+    const current = [...selectedTagIds].sort().join(",");
+    const next = [...tagIds].sort().join(",");
+
+    if (current !== next) {
+      setView("all-notes");
+      setSelectedTagIds(tagIds);
     }
   };
 
-  useEffect(() => {
-    fetchNotes();
-  }, []);
+  /* ------------------ Notes API ------------------ */
 
-  /* ------------------ NoteForm Integration ------------------ */
-
+  /* ------------------ Notes CRUD ------------------ */
   const handleCreateNote = async ({ title, content, tag_ids }) => {
     if (!title.trim()) return;
 
     try {
-      const res = await api.post("/notes", { title, content, tag_ids });
-      // Update the local list with the new note
-      setNotes((prevNotes) => [res.data.note, ...prevNotes]);
-      success("Note Created and List Updated");
-
-      // Switch view to clear the form
-      if (setView) {
-        setView("all-notes");
-      }
+      await api.post("/notes", { title, content, tag_ids });
+      await mutateNotes(); // revalidate notes
+      success("Note created");
+      setView("all-notes");
     } catch (err) {
       apiError(err, "create note");
     }
   };
 
-  /* ------------------ Editing Notes ------------------ */
   const startEdit = (note) => {
     setEditingNoteId(note.id);
     setEditError(null);
@@ -196,14 +170,12 @@ export default function Dashboard() {
       setEditError("Title cannot be empty");
       return;
     }
+
     setOperatingId(id);
     try {
-      const res = await api.put(`/notes/${id}`, {
-        title,
-        content,
-      });
-      setNotes((prev) => prev.map((n) => (n.id === id ? res.data.note : n)));
-      success("Note Updated");
+      await api.put(`/notes/${id}`, { title, content });
+      await mutateNotes();
+      success("Note updated");
       setEditingNoteId(null);
     } catch (err) {
       apiError(err, "update note");
@@ -212,12 +184,29 @@ export default function Dashboard() {
     }
   };
 
+  /* ------------------ Delete Note Mutation (Soft Delete - Move to Trash) ------------------ */
+  const { trigger: deleteNoteTrigger } = useSWRMutation(
+    "/notes/delete",
+    async (url, { arg }) => {
+      const res = await api.delete(`/notes/${arg}`);
+      return res.data;
+    }
+  );
+
   const deleteNote = async (id) => {
     setOperatingId(id);
     try {
-      await api.delete(`/notes/${id}`);
-      setNotes((prev) => prev.filter((n) => n.id !== id));
-      success("Note Deleted");
+      const res = await deleteNoteTrigger(id);
+      if (res?.success) {
+        success(res.message || "Note moved to trash");
+        await mutateNotes();
+        await mutateTrashNotes();
+      } else {
+        apiError(
+          { response: { data: { error: res?.error || "Failed to delete note" } } },
+          "delete note"
+        );
+      }
     } catch (err) {
       apiError(err, "delete note");
     } finally {
@@ -225,78 +214,240 @@ export default function Dashboard() {
     }
   };
 
-  /* ------------------ UI Blocks ------------------ */
-  const Welcome = () => (
-    <Box textAlign="center" py={24} color="gray.600">
-      <Heading color="teal.600" mb={4}>
-        Welcome back 👋
-      </Heading>
-      <p>Select something from the sidebar to begin.</p>
-    </Box>
+  /* ------------------ Archive Note Mutation ------------------ */
+  const { trigger: archiveNoteTrigger, isMutating: isArchiving } = useSWRMutation(
+    "/notes/archive",
+    async (url, { arg }) => {
+      const res = await api.put(`/notes/${arg}/archive`);
+      return res.data;
+    }
   );
 
-  const AllNotes = () => (
-    <>
-      {isFetching ? (
-        <SimpleGrid columns={{ md: 3 }} gap={6}>
-          {[1, 2, 3].map((i) => (
-            <Box key={i} p={4} shadow="md" borderWidth="1px">
-              <Skeleton height="20px" mb={4} />
-              <Skeleton height="60px" />
-            </Box>
-          ))}
-        </SimpleGrid>
-      ) : (
-        <>
-          <SimpleGrid columns={{ md: 3 }} gap={6}>
-            {notes.map((note) => (
-              <NoteCard
-                key={note.id}
-                note={note}
+  const archiveNote = async (id) => {
+    setOperatingId(id);
+    try {
+      const res = await archiveNoteTrigger(id);
+      if (res?.success) {
+        success(res.message || "Note archived");
+        await mutateNotes();
+        await mutateArchivedNotes();
+      } else {
+        apiError(
+          { response: { data: { error: res?.error || "Failed to archive note" } } },
+          "archive note"
+        );
+      }
+    } catch (err) {
+      apiError(err, "archive note");
+    } finally {
+      setOperatingId(null);
+    }
+  };
+
+  /* ------------------ Unarchive Note Mutation ------------------ */
+  const { trigger: unarchiveNoteTrigger, isMutating: isUnarchiving } = useSWRMutation(
+    "/notes/unarchive",
+    async (url, { arg }) => {
+      const res = await api.put(`/notes/${arg}/unarchive`);
+      return res.data;
+    }
+  );
+
+  const unarchiveNote = async (id) => {
+    setOperatingId(id);
+    try {
+      const res = await unarchiveNoteTrigger(id);
+      if (res?.success) {
+        success(res.message || "Note unarchived");
+        await mutateNotes();
+        await mutateArchivedNotes();
+      } else {
+        apiError(
+          { response: { data: { error: res?.error || "Failed to unarchive note" } } },
+          "unarchive note"
+        );
+      }
+    } catch (err) {
+      apiError(err, "unarchive note");
+    } finally {
+      setOperatingId(null);
+    }
+  };
+
+  /* ------------------ Recover Note Mutation ------------------ */
+  const { trigger: recoverNoteTrigger } = useSWRMutation(
+    "/notes/recover",
+    async (url, { arg }) => {
+      const res = await api.put(`/notes/${arg}/recover`);
+      return res.data;
+    }
+  );
+
+  const recoverNote = async (id) => {
+    setOperatingId(id);
+    try {
+      const res = await recoverNoteTrigger(id);
+      if (res?.success) {
+        success(res.message || "Note recovered successfully");
+        await mutateNotes();
+        await mutateTrashNotes();
+      } else {
+        apiError(
+          { response: { data: { error: res?.error || "Failed to recover note" } } },
+          "recover note"
+        );
+      }
+    } catch (err) {
+      apiError(err, "recover note");
+    } finally {
+      setOperatingId(null);
+    }
+  };
+
+  /* ------------------ Delete Forever Mutation ------------------ */
+  const { trigger: deleteForeverTrigger } = useSWRMutation(
+    "/notes/delete-forever",
+    async (url, { arg }) => {
+      const res = await api.delete(`/notes/${arg}/permanent`);
+      return res.data;
+    }
+  );
+
+  const deleteForever = async (id) => {
+    setOperatingId(id);
+    try {
+      const res = await deleteForeverTrigger(id);
+      if (res?.success) {
+        success(res.message || "Note permanently deleted");
+        await mutateTrashNotes();
+      } else {
+        apiError(
+          { response: { data: { error: res?.error || "Failed to delete note forever" } } },
+          "delete note forever"
+        );
+      }
+    } catch (err) {
+      apiError(err, "delete note forever");
+    } finally {
+      setOperatingId(null);
+    }
+  };
+
+  const handleNoteTagsUpdated = async (noteId) => {
+    try {
+      await mutateNotes(); // re-fetch all notes
+    } catch (err) {
+      console.error("Failed to refresh note tags:", err);
+    }
+  };
+
+  return (
+    <Flex flex="1">
+      <Toaster />
+      <Sidebar
+        collapsed={collapsed}
+        allTags={allTags}
+        onSelect={setView}
+        currentFilterTagIds={selectedTagIds}
+        onApplyFilter={applyTagFilter}
+      />
+
+      <Box flex="1" bg="gray.50" p={6}>
+        <Container maxW="container.lg">
+          <Stack gap={8}>
+           
+
+            {/* Search Bar - Show for views that display notes */}
+            {(view === "all-notes" || view === "archived" || view === "trash") && (
+              <SearchBar
+                onSearch={setSearchQuery}
+                placeholder={
+                  view === "archived"
+                    ? "Search archived notes..."
+                    : view === "trash"
+                    ? "Search trash..."
+                    : "Search notes..."
+                }
+              />
+            )}
+
+            {error && (
+              <Alert.Root status="error">
+                <Alert.Indicator />
+                <Alert.Title>Unable to load notes</Alert.Title>
+                <Alert.Description>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => mutateNotes()}
+                  >
+                    Retry
+                  </Button>
+                </Alert.Description>
+              </Alert.Root>
+            )}
+
+            {view === "welcome" && <WelcomeView />}
+            {view === "new-note" && <NoteForm />}
+            {view === "all-notes" && (
+              <AllNotesView
+                notes={notes}
+                isLoading={isLoading}
+                selectedTagIds={selectedTagIds}
+                searchQuery={searchQuery}
+                editingNoteId={editingNoteId}
+                operatingId={operatingId}
                 onEdit={startEdit}
                 onDelete={deleteNote}
-                isEditing={editingNoteId === note.id}
+                onArchive={archiveNote}
+                onUpdate={updateNote}
+                onCancel={cancelEdit}
+                onEditTag={handleEditTag}
                 allTags={allTags}
+                onAlertError={apiError}
+                onAlertSuccess={success}
+                onTagsChanged={handleNoteTagsUpdated}
+              />
+            )}
+            {view === "archived" && (
+              <ArchivedNotesView
+                notes={archivedNotes}
+                isLoading={isArchivedLoading}
+                error={archivedError}
+                searchQuery={searchQuery}
+                onUnarchive={unarchiveNote}
+                onEdit={startEdit}
+                onDelete={deleteNote}
+                editingNoteId={editingNoteId}
                 onUpdate={updateNote}
                 onCancel={cancelEdit}
                 operatingId={operatingId}
                 onEditTag={handleEditTag}
-                onDeleteTag={handleDeleteTag}
-                onAddTag={handleAddTag}
+                allTags={allTags}
                 onAlertError={apiError}
                 onAlertSuccess={success}
-                setGlobalTags={setAllTags}
+                onTagsChanged={handleNoteTagsUpdated}
+                onRetry={() => mutateArchivedNotes()}
               />
-            ))}
-          </SimpleGrid>
-        </>
-      )}
-    </>
-  );
-
-  /* ------------------ Render ------------------ */
-  return (
-    <Box minH="100vh" bg="gray.50" py={10}>
-      <Toaster />
-      <Container maxW="container.lg">
-        <Stack gap={8}>
-          <Box textAlign="center">
-            <Heading color="teal.600">My Notes Dashboard</Heading>
-            <Text color="gray.500">Manage your daily ideas</Text>
-          </Box>
-          {pageError && (
-            <Alert status="error">
-              {pageError}
-              <Button size="xs" variant="underline" onClick={fetchNotes}>
-                Retry
-              </Button>
-            </Alert>
-          )}
-          {view === "welcome" && <Welcome />}
-          {view === "new-note" && <NoteForm onSubmit={handleCreateNote} />}
-          {view === "all-notes" && <AllNotes />}
-        </Stack>
-      </Container>
-    </Box>
+            )}
+            {view === "trash" && (
+              <TrashNotesView
+                notes={trashNotes}
+                isLoading={isTrashLoading}
+                error={trashError}
+                searchQuery={searchQuery}
+                onRecover={recoverNote}
+                onDeleteForever={deleteForever}
+                operatingId={operatingId}
+                allTags={allTags}
+                onAlertError={apiError}
+                onAlertSuccess={success}
+                onRetry={() => mutateTrashNotes()}
+              />
+            )}
+          </Stack>
+        </Container>
+      </Box>
+    </Flex>
   );
 }

@@ -11,15 +11,24 @@ import {
   Stack,
   Alert,
 } from "@chakra-ui/react";
+import useSWRMutation from "swr/mutation";
 import api from "../api/axios";
 
 function Login() {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const authContext = useContext(AuthContext);
   const navigate = useNavigate();
+
+  /* ------------------ Login Mutation ------------------ */
+  const { trigger: loginTrigger, isMutating: loading } = useSWRMutation(
+    "/auth/login",
+    async (url, { arg }) => {
+      const res = await api.post(url, arg);
+      return res.data;
+    }
+  );
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,29 +38,29 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
     if (!formData.email || !formData.password) {
       setError("All fields are required.");
-      setLoading(false);
       return;
     }
 
     try {
-      const res = await api.post("auth/login", formData);
+      const data = await loginTrigger(formData);
+      const {user, token} = data;
 
       // Store token in AuthContext
-      authContext.login({ user: { email: formData.email }, token: res.data.token });
-
+      authContext.login({ user, token });
 
       // Navigate to dashboard
       navigate("/dashboard");
     } catch (err) {
-      if (err.response?.status === 401) setError("Invalid email or password.");
-      else if (err.response?.data?.error) setError(err.response.data.error);
-      else setError("Something went wrong. Try again.");
-    } finally {
-      setLoading(false);
+      if (err.response?.status === 401) {
+        setError("Invalid email or password.");
+      } else if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError("Something went wrong. Try again.");
+      }
     }
   };
 

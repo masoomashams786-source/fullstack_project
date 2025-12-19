@@ -1,42 +1,50 @@
-import {
-  Box,
-  Heading,
-  Text,
-  HStack,
-  IconButton,
-  Input,
-  Textarea,
-  Stack,
-  Button,
-  Badge,
-  Dialog,
-  Portal,
-  NativeSelect,
-  Alert,
-} from "@chakra-ui/react";
-import { FiEdit2, FiTrash2, FiPlus, FiTag } from "react-icons/fi";
+import { Box, Text, Badge, Button } from "@chakra-ui/react";
 import { useState } from "react";
 import ConfirmDialog from "./confirmDialog";
 import api from "../api/axios";
+import useSWRMutation from "swr/mutation";
+import NoteCardEditForm from "./notes/NoteCardEditForm";
+import NoteCardHeader from "./notes/NoteCardHeader";
+import NoteCardTags from "./notes/NoteCardTags";
+import AddTagDialog from "./notes/AddTagDialog";
 
 export default function NoteCard({
   note,
   onEdit,
   onDelete,
+  onArchive,
+  onUnarchive,
+  isArchivedView = false,
+  isTrashView = false,
+  onRecover,
+  onDeleteForever,
   allTags,
   isEditing,
   onUpdate,
   onCancel,
   operatingId,
   onEditTag,
-  onDeleteTag,
+
   onAlertError,
   onAlertSuccess,
-  setGlobalTags,
+
+  onTagsChanged,
 }) {
+  const { trigger: deleteNoteTagTrigger } = useSWRMutation(
+    `/notes/${note.id}/tags`,
+    async (url, { arg }) => {
+      await api.delete(`${url}/${arg.tagId}`);
+      return arg.tagId;
+    }
+  );
+
   // ------------------ Local states ------------------
   const [isDeleteNoteOpen, setIsDeleteNoteOpen] = useState(false);
   const [isDeleteTagOpen, setIsDeleteTagOpen] = useState(false);
+  const [isArchiveOpen, setIsArchiveOpen] = useState(false);
+  const [isUnarchiveOpen, setIsUnarchiveOpen] = useState(false);
+  const [isRecoverOpen, setIsRecoverOpen] = useState(false);
+  const [isDeleteForeverOpen, setIsDeleteForeverOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState(null);
   const [editingTagId, setEditingTagId] = useState(null);
   const [editingTagName, setEditingTagName] = useState("");
@@ -185,8 +193,14 @@ export default function NoteCard({
     setTagAlert(null);
   };
 
-  // ------------------ Save Tags ------------------
-  // NoteCard.jsx
+  // ------------------ mutation hook for global tags ------------------
+  const { trigger: createTagTrigger } = useSWRMutation(
+    "/tags",
+    async (url, { arg }) => {
+      const res = await api.post(url, { name: arg.name });
+      return res.data.tag; // return the newly created tag
+    }
+  );
 
   // ------------------ Save Tags (CORRECTED VERSION) ------------------
   const handleSaveTags = async () => {
@@ -211,8 +225,8 @@ export default function NoteCard({
             tagToAttach = existingGlobalTag;
           } else {
             // Create new tag in backend
-            const res = await api.post("/tags", { name: tag.name });
-            tagToAttach = res.data.tag; // 2. COLLECT the new tag for global update
+            tagToAttach = await createTagTrigger({ name: tag.name });
+            // 2. COLLECT the new tag for global update
             globallyNewTags.push(tagToAttach);
           }
         }
@@ -226,12 +240,12 @@ export default function NoteCard({
       setNoteTags(newlyAttachedTags);
       setTagsToAdd([]);
       setNewTagName("");
-      setIsAddTagDialogOpen(false); // 3. Use the collected tags to update the global state
 
-      if (globallyNewTags.length > 0) {
-        setGlobalTags((prevTags) => [...prevTags, ...globallyNewTags]);
+      if (onTagsChanged) {
+        await onTagsChanged();
       }
 
+      setIsAddTagDialogOpen(false);
       onAlertSuccess("Tags successfully attached to note!");
     } catch (err) {
       console.error(err);
@@ -239,170 +253,86 @@ export default function NoteCard({
     }
   };
 
-  // Remove tag from note locally (frontend only)
-  const handleRemoveNoteTag = (id) => {
-    setNoteTags(noteTags.filter((t) => t.id !== id));
-  };
-
   return (
     <Box p={4} borderWidth="1px" borderRadius="md" shadow="sm" bg="white">
-      {/* ------------------- Note Editing ------------------- */}
-      {isEditing ? (
-        <Stack key={`edit-${note.id}`} gap={2}>
-          <Input
-            value={localTitle}
-            onChange={(e) => setLocalTitle(e.target.value)}
-            placeholder="Note title"
-          />
-          <Textarea
-            value={localContent}
-            onChange={(e) => setLocalContent(e.target.value)}
-            placeholder="Note content"
-          />
-          <HStack mt={2}>
-            <Button
-              size="sm"
-              colorPalette="green"
-              onClick={() => onUpdate(note.id, localTitle, localContent)}
-              isLoading={operatingId === note.id}
-            >
-              Save
-            </Button>
-            <Button
-              size="sm"
-              variant="surface"
-              colorPalette="gray"
-              onClick={onCancel}
-            >
-              Cancel
-            </Button>
-          </HStack>
-        </Stack>
+      {/* Note Editing */}
+      {isEditing && !isTrashView ? (
+        <NoteCardEditForm
+          note={note}
+          localTitle={localTitle}
+          localContent={localContent}
+          operatingId={operatingId}
+          onUpdate={onUpdate}
+          onCancel={onCancel}
+          setLocalTitle={setLocalTitle}
+          setLocalContent={setLocalContent}
+        />
       ) : (
         <>
-          {/* ------------------- Note Header ------------------- */}
-          <HStack justify="space-between" align="start">
-            <Heading size="md" color="teal.700">
-              {note.title}
-            </Heading>
-            <HStack spacing={1}>
-              <IconButton
-                size="sm"
-                boxSize={5}
-                as={FiEdit2}
-                aria-label="Edit note"
-                variant="ghost"
-                colorPalette="teal"
-                onClick={() => onEdit(note)}
-              />
-              <IconButton
-                size="sm"
-                boxSize={5}
-                as={FiTrash2}
-                aria-label="Delete note"
-                variant="ghost"
-                colorPalette="red"
-                onClick={() => setIsDeleteNoteOpen(true)}
-              />
-            </HStack>
-          </HStack>
+          {/* Note Header */}
+          <NoteCardHeader
+            note={note}
+            isTrashView={isTrashView}
+            operatingId={operatingId}
+            onEdit={onEdit}
+            setIsRecoverOpen={setIsRecoverOpen}
+            setIsDeleteNoteOpen={setIsDeleteNoteOpen}
+            setIsDeleteForeverOpen={setIsDeleteForeverOpen}
+          />
 
-          {/* ------------------- Note Content ------------------- */}
+          {/* Note Content */}
           <Text mt={3} noOfLines={4} color="gray.700">
             {note.content}
           </Text>
           <Badge mt={2}>{new Date(note.created_at).toLocaleDateString()}</Badge>
 
-          {/* ------------------- Tags Section ------------------- */}
-          <HStack mt={3} spacing={2} wrap="wrap">
-            {noteTags?.map((tag) => (
-              <HStack
-                key={tag.id}
-                spacing={1}
-                px={2}
-                py={1}
-                borderRadius="md"
-                bg="teal.600"
-                align="center"
+          {/* Archive/Unarchive button - Hide in trash view */}
+          {!isTrashView && (
+            isArchivedView ? (
+              <Button
+                mt={2}
+                size="xs"
+                variant="ghost"
+                colorPalette="blue"
+                onClick={() => setIsUnarchiveOpen(true)}
               >
-                <Box as={FiTag} color="white" boxSize={3} />
+                Unarchive
+              </Button>
+            ) : (
+              <Button
+                mt={2}
+                size="xs"
+                variant="ghost"
+                colorPalette="blue"
+                onClick={() => setIsArchiveOpen(true)}
+              >
+                Archive
+              </Button>
+            )
+          )}
 
-                {/* Tag editing */}
-                {editingTagId === tag.id ? (
-                  <>
-                    <Input
-                      size="xs"
-                      value={editingTagName}
-                      onChange={(e) => setEditingTagName(e.target.value)}
-                      width="100px"
-                      bg="white"
-                      color="black"
-                    />
-                    <Button
-                      size="xs"
-                      colorPalette="green"
-                      onClick={handleTagEditSave}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      size="xs"
-                      colorPalette="gray"
-                      variant="surface"
-                      onClick={() => {
-                        setEditingTagId(null);
-                        setEditingTagName("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Text fontSize="sm" color="white">
-                      {tag.name}
-                    </Text>
-                    <IconButton
-                      size="sm"
-                      boxSize={4}
-                      as={FiEdit2}
-                      aria-label="Edit tag"
-                      variant="ghost"
-                      colorPalette="teal"
-                      color="white"
-                      onClick={() => {
-                        setEditingTagId(tag.id);
-                        setEditingTagName(tag.name);
-                      }}
-                    />
-                    <IconButton
-                      size="sm"
-                      boxSize={4}
-                      as={FiTrash2}
-                      aria-label="Delete tag"
-                      variant="ghost"
-                      colorPalette="red"
-                      onClick={() => {
-                        setSelectedTag(tag);
-                        setIsDeleteTagOpen(true);
-                      }}
-                    />
-                  </>
-                )}
-              </HStack>
-            ))}
-
-            {/* ------------------- Add Tag Icon ------------------- */}
-            <IconButton
-              size="sm"
-              boxSize={4}
-              as={FiPlus}
-              aria-label="Add tag"
-              variant="ghost"
-              colorPalette="teal"
-              onClick={() => setIsAddTagDialogOpen(true)}
-            />
-          </HStack>
+          {/* Tags Section */}
+          <NoteCardTags
+            noteTags={noteTags}
+            isTrashView={isTrashView}
+            editingTagId={editingTagId}
+            editingTagName={editingTagName}
+            onEditTagStart={(tagId, tagName) => {
+              setEditingTagId(tagId);
+              setEditingTagName(tagName);
+            }}
+            onEditTagCancel={() => {
+              setEditingTagId(null);
+              setEditingTagName("");
+            }}
+            onEditTagSave={handleTagEditSave}
+            onDeleteTag={(tag) => {
+              setSelectedTag(tag);
+              setIsDeleteTagOpen(true);
+            }}
+            onAddTagClick={() => setIsAddTagDialogOpen(true)}
+            setEditingTagName={setEditingTagName}
+          />
         </>
       )}
       {/* ------------------- Confirm Dialogs ------------------- */}
@@ -412,9 +342,19 @@ export default function NoteCard({
         title="Delete tag?"
         description={`Are you sure you want to delete "${selectedTag?.name}"?`}
         confirmText="Delete Tag"
-        onConfirm={() => {
-          onDeleteTag(selectedTag.id, note.id);
-          setIsDeleteTagOpen(false);
+        onConfirm={async () => {
+          try {
+            await deleteNoteTagTrigger({ tagId: selectedTag.id });
+            setNoteTags(noteTags.filter((t) => t.id !== selectedTag.id));
+            setIsDeleteTagOpen(false);
+
+            if (onTagsChanged) {
+              await onTagsChanged();
+            }
+          } catch (err) {
+            console.error("Failed to delete tag:", err);
+            if (onAlertError) onAlertError(err, "delete tag");
+          }
         }}
       />
       <ConfirmDialog
@@ -429,158 +369,91 @@ export default function NoteCard({
         }}
       />
 
-      <Dialog.Root
-        open={isAddTagDialogOpen}
-        onOpenChange={handleOpenTagDialog} // Use new handler
-      >
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Add Tags to Note</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body pb="4">
-                <Stack gap="4">
-                  {/* ------------------- Alert Component ------------------- */}
-                  {tagAlert && (
-                    <Stack gap="4" width="full">
-                      <Alert.Root status="error">
-                        <Alert.Indicator />
-                        <Alert.Title>{tagAlert}</Alert.Title>
-                      </Alert.Root>
-                    </Stack>
-                  )}
+      {/* Archive confirmation dialog */}
+      <ConfirmDialog
+        isOpen={isArchiveOpen}
+        onClose={() => setIsArchiveOpen(false)}
+        title="Archive note?"
+        description={`Are you sure you want to archive "${note.title}"?`}
+        confirmText="Archive Note"
+        onConfirm={async () => {
+          try {
+            await onArchive(note.id);
+          } finally {
+            setIsArchiveOpen(false);
+          }
+        }}
+      />
 
-                  {/* Existing tags selection */}
-                  <Stack>
-                    <Text color="teal.700" fontWeight="medium">
-                      Select Existing Tag
-                    </Text>
-                    <HStack>
-                      <NativeSelect.Root>
-                        <NativeSelect.Field
-                          as="select"
-                          value={selectedExistingTagId}
-                          style={{ maxHeight: "200px", overflowY: "auto" }}
-                          onChange={(e) => {
-                            setSelectedExistingTagId(e.target.value);
-                            setTagAlert(null); // Clear alert on change
-                          }}
-                        >
-                          <option value="">-- Select a tag --</option>
-                          {allTags
-                            // Filter out tags already attached to the note
-                            .filter(
-                              (tag) => !noteTags.some((nt) => nt.id === tag.id)
-                            )
-                            .map((tag) => (
-                              <option key={tag.id} value={tag.id}>
-                                {tag.name}
-                              </option>
-                            ))}
-                        </NativeSelect.Field>
-                        <NativeSelect.Indicator />
-                      </NativeSelect.Root>
-                      <Button
-                        size="sm"
-                        colorPalette="teal"
-                        onClick={handleAddExistingTag}
-                      >
-                        Add
-                      </Button>
-                    </HStack>
-                  </Stack>
+      {/* Unarchive confirmation dialog */}
+      <ConfirmDialog
+        isOpen={isUnarchiveOpen}
+        onClose={() => setIsUnarchiveOpen(false)}
+        title="Unarchive note?"
+        description={`Are you sure you want to unarchive "${note.title}"?`}
+        confirmText="Unarchive Note"
+        onConfirm={async () => {
+          try {
+            await onUnarchive(note.id);
+          } finally {
+            setIsUnarchiveOpen(false);
+          }
+        }}
+      />
 
-                  {/* New tags input */}
-                  <Stack>
-                    <Text color="teal.700">Create New Tag</Text>
-                    <HStack>
-                      <Input
-                        placeholder="New tag name"
-                        value={newTagName}
-                        onChange={(e) => {
-                          setNewTagName(e.target.value);
-                          setTagAlert(null); // Clear alert on change
-                        }}
-                      />
-                      <Button
-                        size="sm"
-                        colorPalette="teal"
-                        onClick={handleAddNewTag}
-                      >
-                        Add
-                      </Button>
-                    </HStack>
-                  </Stack>
+      {/* Recover confirmation dialog */}
+      <ConfirmDialog
+        isOpen={isRecoverOpen}
+        onClose={() => setIsRecoverOpen(false)}
+        title="Recover note?"
+        description={`Are you sure you want to recover "${note.title}"? It will be restored to your notes.`}
+        confirmText="Recover Note"
+        onConfirm={async () => {
+          try {
+            await onRecover(note.id);
+          } finally {
+            setIsRecoverOpen(false);
+          }
+        }}
+      />
 
-                  {/* ------------------- Combined Tag Preview ------------------- */}
-                  <Stack>
-                    <Text color="teal.700" fontWeight="medium">
-                      Tags to be Attached
-                    </Text>
-                    <HStack spacing={2} wrap="wrap">
-                      {currentTagsInDialog.map((tag, index) => (
-                        <Badge
-                          key={tag.id || `new-${index}`}
-                          colorPalette={
-                            noteTags.some((t) => t.id === tag.id)
-                              ? "gray"
-                              : "teal"
-                          }
-                          px={2}
-                          py={1}
-                          borderRadius="md"
-                        >
-                          {tag.name}
-                          {/* Remove button for pending tags only */}
-                          {!noteTags.some((t) => t.id === tag.id) && (
-                            <IconButton
-                              size="xs"
-                              boxSize={3}
-                              ml={1}
-                              as={FiTrash2}
-                              aria-label={`Remove pending tag ${tag.name}`}
-                              variant="ghost"
-                              colorPalette="red"
-                              onClick={() => {
-                                setTagsToAdd(
-                                  tagsToAdd.filter((t) => t !== tag)
-                                );
-                                setTagAlert(null);
-                              }}
-                            />
-                          )}
-                        </Badge>
-                      ))}
-                      {currentTagsInDialog.length === 0 && (
-                        <Text fontSize="sm" color="gray.500">
-                          No tags selected yet.
-                        </Text>
-                      )}
-                    </HStack>
-                  </Stack>
-                </Stack>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button
-                  variant="outline"
-                  onClick={() => handleOpenTagDialog(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSaveTags}
-                  disabled={tagsToAdd.length === 0}
-                >
-                  Save ({tagsToAdd.length} Tag
-                  {tagsToAdd.length !== 1 ? "s" : ""})
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
+      {/* Delete Forever confirmation dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteForeverOpen}
+        onClose={() => setIsDeleteForeverOpen(false)}
+        title="Delete forever?"
+        description={`Are you sure you want to permanently delete "${note.title}"? This action cannot be undone.`}
+        confirmText="Delete Forever"
+        onConfirm={async () => {
+          try {
+            await onDeleteForever(note.id);
+          } finally {
+            setIsDeleteForeverOpen(false);
+          }
+        }}
+      />
+
+      <AddTagDialog
+        isOpen={isAddTagDialogOpen}
+        onOpenChange={handleOpenTagDialog}
+        allTags={allTags}
+        noteTags={noteTags}
+        tagsToAdd={tagsToAdd}
+        selectedExistingTagId={selectedExistingTagId}
+        newTagName={newTagName}
+        tagAlert={tagAlert}
+        onAddExistingTag={handleAddExistingTag}
+        onAddNewTag={handleAddNewTag}
+        onRemovePendingTag={(tag) => {
+          setTagsToAdd(tagsToAdd.filter((t) => t !== tag));
+          setTagAlert(null);
+        }}
+        onSaveTags={handleSaveTags}
+        onClearAlert={() => setTagAlert(null)}
+        setSelectedExistingTagId={setSelectedExistingTagId}
+        setNewTagName={setNewTagName}
+        setTagsToAdd={setTagsToAdd}
+      />
     </Box>
   );
 }

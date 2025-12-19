@@ -48,6 +48,7 @@ class Note(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow) 
 
     is_archived: Mapped[bool] = mapped_column(default=False, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(default=False, nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="notes")
     tags: Mapped[list["Tag"]] = relationship("Tag", secondary=note_tags, back_populates="notes")
@@ -62,6 +63,7 @@ class Note(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "is_archived": self.is_archived,
+            "is_deleted": self.is_deleted,
             
             "tags": [t.to_dict() for t in self.tags]
         }

@@ -10,6 +10,7 @@ import {
   Stack,
   Alert,
 } from "@chakra-ui/react";
+import useSWRMutation from "swr/mutation";
 import api from "../api/axios";
 
 function Signup() {
@@ -21,9 +22,17 @@ function Signup() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+
+  /* ------------------ Signup Mutation ------------------ */
+  const { trigger: signupTrigger, isMutating: loading } = useSWRMutation(
+    "/auth/signup",
+    async (url, { arg }) => {
+      const res = await api.post(url, arg);
+      return res.data;
+    }
+  );
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -33,24 +42,17 @@ function Signup() {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-    setLoading(true);
-
+  const validateForm = () => {
     const { username, email, password } = formData;
 
     if (!username || !email || !password) {
       setError("All fields are required.");
-      setLoading(false);
-      return;
+      return false;
     }
 
     if (username.length < 3 || username.length > 20) {
       setError("Username must be between 3 and 20 characters.");
-      setLoading(false);
-      return;
+      return false;
     }
 
     const usernameRegex = /^[a-zA-Z0-9._-]+$/;
@@ -58,31 +60,42 @@ function Signup() {
       setError(
         "Username can only contain letters, numbers, underscore (_), dot (.), or hyphen (-)."
       );
-      setLoading(false);
-      return;
+      return false;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address.");
-      setLoading(false);
-      return;
+      return false;
     }
 
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
-      setLoading(false);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!validateForm()) {
       return;
     }
 
+    const { username, email, password } = formData;
+
     try {
-      const res = await api.post("/auth/signup", {
+      const data = await signupTrigger({
         username,
         email,
         password,
       });
 
-      setSuccess(res.data.message || "Signup successful!");
+      setSuccess(data.message || "Signup successful!");
       setFormData({ username: "", email: "", password: "" });
 
       setTimeout(() => navigate("/login"), 1500);
@@ -99,8 +112,6 @@ function Signup() {
       } else {
         setError("Signup failed.");
       }
-    } finally {
-      setLoading(false);
     }
   };
 

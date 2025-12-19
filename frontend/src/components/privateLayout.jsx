@@ -5,7 +5,6 @@ import { useContext, useState } from "react";
 import { AuthContext } from "../pages/auth-context";
 import Sidebar from "./sidebar";
 
-
 export default function PrivateLayout() {
   const { user, logout } = useContext(AuthContext);
   const [view, setView] = useState("all-notes");
@@ -22,16 +21,14 @@ export default function PrivateLayout() {
         py={4}
       >
         <Heading size="md">Welcome to your app {user?.name}!</Heading>
-        
+
         <Button colorPalette="gray" variant="surface" onClick={logout}>
           Logout
         </Button>
       </Flex>
 
       <Flex flex="1">
-        <Sidebar onSelect={setView} />                                <Box flex="1" bg="gray.50" p={6}>  
-          <Outlet context={{ view, setView }} />
-        </Box>
+       <Outlet context={{ view, setView }} />
       </Flex>
 
       {/* Footer */}

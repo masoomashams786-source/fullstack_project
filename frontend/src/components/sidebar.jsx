@@ -18,11 +18,16 @@ import {
 } from "react-icons/fi";
 import { AuthContext } from "../pages/auth-context";
 import { Link } from "react-router-dom";
+import SidebarTags from "./SidebarTags";
 
-export default function Sidebar({ collapsed = false, onSelect }) {
+export default function Sidebar({
+  collapsed = false,
+  onSelect,
+  allTags,
+  currentFilterTagIds,
+  onApplyFilter,
+}) {
   const { logout } = useContext(AuthContext);
-
-  const tags = ["Work", "Study", "Personal"];
 
   return (
     <Box
@@ -65,7 +70,11 @@ export default function Sidebar({ collapsed = false, onSelect }) {
               to="/dashboard"
               variant="ghost"
               justifyContent={collapsed ? "center" : "flex-start"}
-               onClick={() => onSelect("all-notes")}
+              onClick={() => {
+                
+                onApplyFilter && onApplyFilter([]);
+                onSelect("all-notes");
+              }}
             >
               <Icon as={FiFileText} boxSize={5} />
               {!collapsed && <Text ml={3}>All Notes</Text>}
@@ -83,28 +92,14 @@ export default function Sidebar({ collapsed = false, onSelect }) {
           <Separator my={4} borderColor="gray.200" />
 
           {/* Section 2: Tags */}
+          
 
-          <Flex align="center" ml={3} mb={2} pl={collapsed ? 0 : 3}>
-            <Icon as={FiTag} boxSize={5} />
-            {!collapsed && (
-              <Text ml={4} fontSize="sm" fontWeight="bold">
-                Tags
-              </Text>
-            )}
-          </Flex>
-
-          <Stack spacing={1} pl={collapsed ? 0 : 3}>
-            {tags.map((tag) => (
-              <Button
-                key={tag}
-                variant="ghost"
-                justifyContent={collapsed ? "center" : "flex-start"}
-                onClick={() => onSelect(`tag-${tag.toLowerCase()}`)}
-              >
-                <Text>{!collapsed && `• ${tag}`}</Text>
-              </Button>
-            ))}
-          </Stack>
+          <SidebarTags
+            collapsed={collapsed}
+            allTags={allTags}
+            currentFilterTagIds={currentFilterTagIds}
+            onApplyFilter={onApplyFilter}
+          />
 
           <Separator my={4} borderColor="gray.200" />
 
@@ -113,7 +108,11 @@ export default function Sidebar({ collapsed = false, onSelect }) {
             <Button
               variant="ghost"
               justifyContent={collapsed ? "center" : "flex-start"}
-              onClick={() => onSelect("archived")}
+              onClick={() => {
+                // Clear tag filters when viewing archived notes
+                onApplyFilter && onApplyFilter([]);
+                onSelect("archived");
+              }}
             >
               <Icon as={FiArchive} boxSize={5} />
               {!collapsed && <Text ml={3}> Archived</Text>}
@@ -121,7 +120,11 @@ export default function Sidebar({ collapsed = false, onSelect }) {
             <Button
               variant="ghost"
               justifyContent={collapsed ? "center" : "flex-start"}
-              onClick={() => onSelect("trash")}
+              onClick={() => {
+                // Clear tag filters when viewing trash
+                onApplyFilter && onApplyFilter([]);
+                onSelect("trash");
+              }}
             >
               <Icon as={FiTrash} boxSize={5} />
               {!collapsed && <Text ml={3}>Trash</Text>}

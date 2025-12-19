@@ -105,7 +105,7 @@ def login():
             "exp": datetime.utcnow() + timedelta(hours=1)
         }
         token = jwt.encode(payload, current_app.config["JWT_SECRET_KEY"], algorithm="HS256")
-        return jsonify({"token": token}), 200
+        return jsonify({"token": token, "user": user.to_dict()}), 200
 
 
 # -----------------------------

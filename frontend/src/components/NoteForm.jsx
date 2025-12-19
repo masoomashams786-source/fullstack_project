@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
-import api from "../api/axios";
+import { useEffect, useState } from "react";
+import api, { getAllTags, getLoggedInUserNotes } from "../api/axios";
+import useSWR, { mutate } from "swr";
+import { fetcher } from "../api/axios";
 import {
   Box,
   Stack,
@@ -10,59 +12,71 @@ import {
   Badge,
   Text,
   NativeSelect,
-  Flex
+  Flex,
 } from "@chakra-ui/react";
+import { toaster } from "./ui/toaster";
+import NotesTags from "./NotesTags";
 
-export default function NoteForm({ onSubmit }) {
+export default function NoteForm() {
+  const { data: userNotes, isLoading } = useSWR(
+    "user/notes",
+    getLoggedInUserNotes
+  );
+  const [tags, setTags] = useState([]);
+  useEffect(() => {
+    if (userNotes) {
+      // [[{"id": 1}, {"id:" }]]
+      const notesTags = userNotes.notes.map((n) => n.tags).flat();
+      const uniqueTags = [];
+      notesTags.forEach((tag) => {
+        const tagExist = uniqueTags.find((t) => t.id == tag.id);
+        if (!tagExist) {
+          uniqueTags.push(tag);
+        }
+      });
+      setTags(uniqueTags);
+    }
+  }, [userNotes]);
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [tags, setTags] = useState([]);
+  const [noteTags, setNoteTags] = useState([]);
+
   const [selectedTagId, setSelectedTagId] = useState("");
   const [newTag, setNewTag] = useState("");
-  const [noteTags, setNoteTags] = useState([]);
   const [error, setError] = useState("");
-
-  // Fetch existing tags
-  useEffect(() => {
-    const fetchTags = async () => {
-      try {
-        const res = await api.get("/tags"); // FIX: no trailing slash
-        setTags(res.data.tags || []);
-      } catch (err) {
-        console.error("Failed to fetch tags:", err);
-        setError("Failed to load tags");
-      }
-    };
-    fetchTags();
-  }, []);
-
+  // const handleSelectTag = () => {}
   // Add existing tag to note
   const handleSelectTag = () => {
     if (!selectedTagId) return;
-    const tag = tags.find((t) => t.id.toString() === selectedTagId.toString());
-    if (tag && !noteTags.some((t) => t.id === tag.id)) {
-      setNoteTags([...noteTags, tag]);
+    const tagExist = noteTags.indexOf(Number(selectedTagId));
+    if (tagExist === -1) {
+      setNoteTags([...noteTags, Number(selectedTagId)]);
     }
     setSelectedTagId("");
+    // setNoteTags([...new Set([...noteTags, selectedTagId])]);
   };
 
-  // Remove tag from note
+  // // Remove tag from note
   const handleRemoveTag = (id) => {
-    setNoteTags(noteTags.filter((t) => t.id !== id));
+    setNoteTags(noteTags.filter((tagId) => tagId !== id));
   };
 
-  // Add new tag to backend
+  // const handleAddNewTag = () => {}
+
+  // // Add new tag to backend
   const handleAddNewTag = async () => {
     const name = newTag.trim().toLowerCase();
     if (!name) return;
-    if (tags.some((t) => t.name === name)) {
+    if (noteTags.some((t) => t.name === name)) {
       setError("This tag already exists");
       return;
     }
     try {
-      const res = await api.post("/tags", { name }); // FIX: no trailing slash
-      setTags([...tags, res.data.tag]);
-      setNoteTags([...noteTags, res.data.tag]);
+      const res = await api.post("/tags", { name });
+      const newTagObj = res.data.tag;
+
+      setNoteTags([...noteTags, newTagObj]);
       setNewTag("");
       setError("");
     } catch (err) {
@@ -71,9 +85,11 @@ export default function NoteForm({ onSubmit }) {
     }
   };
 
+  // const handleSubmit = () => {}
   // Submit note
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
     if (!title.trim()) {
       setError("Title cannot be empty");
@@ -83,32 +99,48 @@ export default function NoteForm({ onSubmit }) {
     const noteData = {
       title,
       content,
-      tag_ids: noteTags.map((t) => t.id),
+      tag_ids: noteTags,
     };
 
     try {
-      // Just pass the data to the parent (Dashboard)
-      if (onSubmit) {
-        await onSubmit(noteData);
-      }
+      await api.post("/notes", noteData);
+      // invalidate cache to re-fetch notes
+      // mutate("/notes")
+      toaster.create({
+        title: "Note created",
+      });
 
       // Clear form fields
       setTitle("");
       setContent("");
       setNoteTags([]);
-      setError("");
     } catch (err) {
       console.error(err);
       setError("Failed to create note");
     }
   };
 
+  if (isLoading) {
+    return <p>Loading Tags/Notes</p>;
+  }
+
+  // noteTags [1,2,3,4]
+  // [ {"id":1 ,name: "Javascript"}]
+
+  const selectedTags = tags.filter((tag) => noteTags.includes(tag.id));
+  console.log({ selectedTags, noteTags, tags });
+
   return (
     <Flex w="100%" justify="center" bg="gray.50" py={10}>
       <Box bg="white" p={6} borderRadius="md" shadow="md" maxW="600px" w="100%">
         <form onSubmit={handleSubmit}>
           <Stack spacing={4}>
-            <Text fontSize="xl" textAlign="center" fontWeight="bold" color="teal.700">
+            <Text
+              fontSize="xl"
+              textAlign="center"
+              fontWeight="bold"
+              color="teal.700"
+            >
               Create New Note
             </Text>
             <Text fontSize="sm" textAlign="center" color="gray.700">
@@ -188,23 +220,7 @@ export default function NoteForm({ onSubmit }) {
             </Stack>
 
             {/* Selected Tags */}
-            <Stack direction="row" spacing={2} wrap="wrap">
-              {noteTags.map((tag) => (
-                <Badge key={tag.id} colorPalette="teal" px={2} py={1} borderRadius="md">
-                  <HStack spacing={1}>
-                    <Text>{tag.name}</Text>
-                    <Button
-                      size="xs"
-                      onClick={() => handleRemoveTag(tag.id)}
-                      variant="ghost"
-                      colorPalette="red"
-                    >
-                      x
-                    </Button>
-                  </HStack>
-                </Badge>
-              ))}
-            </Stack>
+            <NotesTags noteTags={selectedTags} onDeleteTag={handleRemoveTag} />
 
             {/* Error */}
             {error && (

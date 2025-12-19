@@ -5,6 +5,7 @@ from .tags import tag_bp
 from .models import Base
 from .database import engine
 from flask_cors import CORS
+from sqlalchemy import text
 
 # -----------------------------
 # Flask app
@@ -37,3 +38,25 @@ app.register_blueprint(tag_bp, url_prefix="/api")
 # Create tables
 with engine.begin() as conn:
     Base.metadata.create_all(conn)
+    
+    # Migration: Add is_deleted column if it doesn't exist
+    try:
+        result = conn.execute(text("""
+            SELECT COUNT(*) as count
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'note'
+            AND COLUMN_NAME = 'is_deleted'
+        """))
+        
+        count = result.fetchone()[0]
+        
+        if count == 0:
+            # Column doesn't exist, add it
+            conn.execute(text("""
+                ALTER TABLE note
+                ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+            """))
+            print("✅ Successfully added 'is_deleted' column to 'note' table")
+    except Exception as e:
+        print(f"⚠️  Migration check failed (this is OK if column already exists): {str(e)}")
