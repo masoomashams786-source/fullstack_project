@@ -39,5 +39,3 @@ export const getLoggedInUserNotes = async () => {
     throw new Error("Failed to fetch notes")
   }
 }
-
-exportconst 

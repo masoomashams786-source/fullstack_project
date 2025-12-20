@@ -19,6 +19,7 @@ export default function AllNotesView({
   onAlertError,
   onAlertSuccess,
   onTagsChanged,
+  singleColumn = false,
 }) {
   // Filter and search notes
   const filteredNotes = useMemo(() => {
@@ -77,7 +78,11 @@ export default function AllNotesView({
   }
 
   return (
-    <SimpleGrid columns={{ md: 3 }} gap={6}>
+    <SimpleGrid columns={
+    singleColumn 
+      ? { base: 1 }  // 1 column when form is shown
+      : { base: 1, md: 2, lg: 3 }  // Responsive: 1 on mobile, 2 on tablet, 3 on desktop
+  }  gap={6}>
       {filteredNotes.map((note) => (
         <NoteCard
           key={note.id}

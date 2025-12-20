@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import api, { getAllTags, getLoggedInUserNotes } from "../api/axios";
+import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
 import useSWR, { mutate } from "swr";
 import { fetcher } from "../api/axios";
 import {
@@ -15,21 +16,38 @@ import {
   Flex,
 } from "@chakra-ui/react";
 import { toaster } from "./ui/toaster";
-import NotesTags from "./NotesTags";
 
 export default function NoteForm() {
-  const { data: userNotes, isLoading } = useSWR(
-    "user/notes",
-    getLoggedInUserNotes
-  );
+  const navigate = useNavigate();
+  // Fetch notes to extract tags
+  const { data: notesData, isLoading } = useSWR("/notes", fetcher);
+  const userNotes = notesData?.notes || [];
+
+  // Extract unique tags from all notes
   const [tags, setTags] = useState([]);
+
+  const formRef = useRef(null);
   useEffect(() => {
-    if (userNotes) {
-      // [[{"id": 1}, {"id:" }]]
-      const notesTags = userNotes.notes.map((n) => n.tags).flat();
+  // only for small screens (mobile)
+  if (window.innerWidth <= 768 && formRef.current) {
+    formRef.current.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+
+    // focus the first input (title)
+    const input = formRef.current.querySelector("input");
+    input?.focus();
+  }
+}, []);
+
+
+  useEffect(() => {
+    if (userNotes && userNotes.length > 0) {
+      const notesTags = userNotes.map((n) => n.tags).flat();
       const uniqueTags = [];
       notesTags.forEach((tag) => {
-        const tagExist = uniqueTags.find((t) => t.id == tag.id);
+        const tagExist = uniqueTags.find((t) => t.id === tag.id);
         if (!tagExist) {
           uniqueTags.push(tag);
         }
@@ -38,54 +56,67 @@ export default function NoteForm() {
     }
   }, [userNotes]);
 
+  // Form state
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [noteTags, setNoteTags] = useState([]);
-
+  const [noteTags, setNoteTags] = useState([]); // Array of tag IDs
   const [selectedTagId, setSelectedTagId] = useState("");
   const [newTag, setNewTag] = useState("");
   const [error, setError] = useState("");
-  // const handleSelectTag = () => {}
+
   // Add existing tag to note
   const handleSelectTag = () => {
     if (!selectedTagId) return;
-    const tagExist = noteTags.indexOf(Number(selectedTagId));
-    if (tagExist === -1) {
-      setNoteTags([...noteTags, Number(selectedTagId)]);
+    const tagId = Number(selectedTagId);
+
+    if (!noteTags.includes(tagId)) {
+      setNoteTags([...noteTags, tagId]);
     }
     setSelectedTagId("");
-    // setNoteTags([...new Set([...noteTags, selectedTagId])]);
   };
 
-  // // Remove tag from note
+  // Remove tag from note
   const handleRemoveTag = (id) => {
     setNoteTags(noteTags.filter((tagId) => tagId !== id));
   };
 
-  // const handleAddNewTag = () => {}
-
-  // // Add new tag to backend
+  // Add new tag to backend
   const handleAddNewTag = async () => {
     const name = newTag.trim().toLowerCase();
     if (!name) return;
-    if (noteTags.some((t) => t.name === name)) {
-      setError("This tag already exists");
+
+    // Check if tag already exists in the global tags list
+    if (tags.some((t) => t.name.toLowerCase() === name)) {
+      setError("This tag already exists. Please select it from the dropdown.");
       return;
     }
+
     try {
       const res = await api.post("/tags", { name });
       const newTagObj = res.data.tag;
 
-      setNoteTags([...noteTags, newTagObj]);
+      // Add to local tags list
+      setTags([...tags, newTagObj]);
+
+      // Add to note's tags
+      setNoteTags([...noteTags, newTagObj.id]);
+
       setNewTag("");
       setError("");
+
+      // Revalidate notes to refresh tags globally
+      await mutate("/notes");
+
+      toaster.create({
+        title: "Tag created successfully",
+        type: "success",
+      });
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Failed to create tag");
     }
   };
 
-  // const handleSubmit = () => {}
   // Submit note
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -99,40 +130,45 @@ export default function NoteForm() {
     const noteData = {
       title,
       content,
-      tag_ids: noteTags,
+      tag_ids: noteTags, // Array of tag IDs
     };
 
     try {
       await api.post("/notes", noteData);
-      // invalidate cache to re-fetch notes
-      // mutate("/notes")
+
+      // Revalidate notes cache
+      await mutate("/notes");
+
       toaster.create({
-        title: "Note created",
+        title: "Note created successfully",
+        type: "success",
       });
 
       // Clear form fields
       setTitle("");
       setContent("");
       setNoteTags([]);
+      navigate("/dashboard");
     } catch (err) {
       console.error(err);
-      setError("Failed to create note");
+      setError(err.response?.data?.error || "Failed to create note");
     }
   };
 
   if (isLoading) {
-    return <p>Loading Tags/Notes</p>;
+    return (
+      <Flex w="100%" justify="center" bg="gray.50" py={10}>
+        <Text>Loading tags...</Text>
+      </Flex>
+    );
   }
 
-  // noteTags [1,2,3,4]
-  // [ {"id":1 ,name: "Javascript"}]
-
+  // Get selected tag objects for display
   const selectedTags = tags.filter((tag) => noteTags.includes(tag.id));
-  console.log({ selectedTags, noteTags, tags });
 
   return (
     <Flex w="100%" justify="center" bg="gray.50" py={10}>
-      <Box bg="white" p={6} borderRadius="md" shadow="md" maxW="600px" w="100%">
+     <Box ref={formRef} bg="white" p={6} borderRadius="md" shadow="md" w="full">
         <form onSubmit={handleSubmit}>
           <Stack spacing={4}>
             <Text
@@ -220,7 +256,29 @@ export default function NoteForm() {
             </Stack>
 
             {/* Selected Tags */}
-            <NotesTags noteTags={selectedTags} onDeleteTag={handleRemoveTag} />
+            <Stack direction="row" spacing={2} wrap="wrap">
+              {selectedTags.map((tag) => (
+                <Badge
+                  key={tag.id}
+                  colorPalette="teal"
+                  px={2}
+                  py={1}
+                  borderRadius="md"
+                >
+                  <HStack spacing={1}>
+                    <Text>{tag.name}</Text>
+                    <Button
+                      size="xs"
+                      onClick={() => handleRemoveTag(tag.id)}
+                      variant="ghost"
+                      colorPalette="red"
+                    >
+                      ×
+                    </Button>
+                  </HStack>
+                </Badge>
+              ))}
+            </Stack>
 
             {/* Error */}
             {error && (

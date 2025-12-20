@@ -3,8 +3,9 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
-import PrivateLayout from "./components/privateLayout";
+import PrivateLayout from "./components/PrivateLayout";
 import { Toaster } from "@/components/ui/toaster";
+import DashboardWithNoteForm from "./pages/DashboardWithNoteForm";
 
 function App() {
   return (
@@ -13,7 +14,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
-        
+
         <Route
           path="/"
           element={
@@ -23,10 +24,9 @@ function App() {
           }
         >
           <Route path="dashboard" element={<Dashboard />} />
-          
+          <Route path="new-note" element={<Dashboard showNoteForm={true} />} />
         </Route>
 
-        
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </>

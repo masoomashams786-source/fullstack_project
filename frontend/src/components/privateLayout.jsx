@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { Box, Flex, VStack, Heading, Button } from "@chakra-ui/react";
 import { useContext, useState } from "react";
 import { AuthContext } from "../pages/auth-context";
+import { ColorModeButton } from "@/components/ui/color-mode";
 import Sidebar from "./sidebar";
 
 export default function PrivateLayout() {
@@ -22,9 +23,8 @@ export default function PrivateLayout() {
       >
         <Heading size="md">Welcome to your app {user?.name}!</Heading>
 
-        <Button colorPalette="gray" variant="surface" onClick={logout}>
-          Logout
-        </Button>
+        
+         <ColorModeButton  color='white'/>
       </Flex>
 
       <Flex flex="1">

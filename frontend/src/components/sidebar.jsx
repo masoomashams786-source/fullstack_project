@@ -71,7 +71,6 @@ export default function Sidebar({
               variant="ghost"
               justifyContent={collapsed ? "center" : "flex-start"}
               onClick={() => {
-                
                 onApplyFilter && onApplyFilter([]);
                 onSelect("all-notes");
               }}
@@ -80,6 +79,8 @@ export default function Sidebar({
               {!collapsed && <Text ml={3}>All Notes</Text>}
             </Button>
             <Button
+              as={Link}
+              to="/new-note"
               variant="ghost"
               justifyContent={collapsed ? "center" : "flex-start"}
               onClick={() => onSelect("new-note")}
@@ -92,7 +93,6 @@ export default function Sidebar({
           <Separator my={4} borderColor="gray.200" />
 
           {/* Section 2: Tags */}
-          
 
           <SidebarTags
             collapsed={collapsed}
