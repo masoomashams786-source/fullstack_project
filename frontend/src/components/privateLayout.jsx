@@ -1,14 +1,16 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
-import { Box, Flex, VStack, Heading, Button } from "@chakra-ui/react";
+import { Box, Flex, Heading, Button, HStack } from "@chakra-ui/react";
 import { useContext, useState } from "react";
 import { AuthContext } from "../pages/auth-context";
 import { ColorModeButton } from "@/components/ui/color-mode";
-import Sidebar from "./sidebar";
+import { useTextSize } from "../context/TextSizeContext";
+import { FiType } from "react-icons/fi";
 
 export default function PrivateLayout() {
   const { user, logout } = useContext(AuthContext);
   const [view, setView] = useState("all-notes");
+  const { textSize, cycleTextSize } = useTextSize();
 
   return (
     <Flex minH="100vh" direction="column">
@@ -23,12 +25,25 @@ export default function PrivateLayout() {
       >
         <Heading size="md">Welcome to your app {user?.name}!</Heading>
 
-        
-         <ColorModeButton  color='white'/>
+        <HStack spacing={3}>
+          <Button 
+            
+            onClick={cycleTextSize}
+            size="sm"
+            colorPalette="gray" variant="surface"
+          >
+            <FiType style={{ marginRight: "3px" }} />
+           : {textSize.toUpperCase()}
+          </Button>
+          
+          <ColorModeButton color="white" />
+          
+         
+        </HStack>
       </Flex>
 
       <Flex flex="1">
-       <Outlet context={{ view, setView }} />
+        <Outlet context={{ view, setView }} />
       </Flex>
 
       {/* Footer */}

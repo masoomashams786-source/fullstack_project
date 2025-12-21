@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
+  ButtonGroup,
   Field,
   Fieldset,
   Input,
@@ -186,9 +187,12 @@ function Signup() {
             </Field.Root>
           </Fieldset.Content>
 
-          <Button type="submit" mt={4} colorScheme="blue" disabled={loading}>
-            {loading ? <Spinner size="sm" /> : "Sign Up"}
+          <ButtonGroup colorPalette="blue">
+
+          <Button type="submit" mt={4}  colorPalette="blue" disabled={loading}>
+            {loading ? <Spinner loading loadingText="Loading" spinnerPlacement="start" size="sm" /> : "Sign Up"}
           </Button>
+          </ButtonGroup>
         </Fieldset.Root>
       </form>
     </Box>

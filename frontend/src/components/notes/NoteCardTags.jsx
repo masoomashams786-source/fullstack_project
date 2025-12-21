@@ -1,5 +1,6 @@
 import { HStack, Box, Text, IconButton, Input, Button } from "@chakra-ui/react";
 import { FiTag, FiEdit2, FiTrash2, FiPlus } from "react-icons/fi";
+import { useTextSize } from "../../context/TextSizeContext";
 
 export default function NoteCardTags({
   noteTags,
@@ -14,6 +15,7 @@ export default function NoteCardTags({
   setEditingTagName,
 }) {
   // Read-only tags for trash view
+   const { textSize, cycleTextSize } = useTextSize();
   if (isTrashView && noteTags && noteTags.length > 0) {
     return (
       <HStack mt={3} spacing={2} wrap="wrap">
@@ -26,9 +28,10 @@ export default function NoteCardTags({
             borderRadius="md"
             bg="gray.400"
             align="center"
+            Size={textSize}
           >
             <Box as={FiTag} color="white" boxSize={3} />
-            <Text fontSize="sm" color="white">
+            <Text fontSize={textSize} color="white">
               {tag.name}
             </Text>
           </HStack>

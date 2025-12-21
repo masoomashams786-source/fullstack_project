@@ -1,4 +1,5 @@
 import { Stack, Input, Textarea, HStack, Button } from "@chakra-ui/react";
+import { useTextSize } from "../../context/TextSizeContext";
 
 export default function NoteCardEditForm({
   note,
@@ -10,14 +11,17 @@ export default function NoteCardEditForm({
   setLocalTitle,
   setLocalContent,
 }) {
+   const { textSize, cycleTextSize } = useTextSize();
   return (
     <Stack key={`edit-${note.id}`} gap={2}>
       <Input
         value={localTitle}
+        size={textSize}
         onChange={(e) => setLocalTitle(e.target.value)}
         placeholder="Note title"
       />
       <Textarea
+      size={textSize}
         value={localContent}
         onChange={(e) => setLocalContent(e.target.value)}
         placeholder="Note content"

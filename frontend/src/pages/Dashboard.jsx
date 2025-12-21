@@ -352,7 +352,7 @@ export default function Dashboard({ showNoteForm = false }) {
       onApplyFilter={applyTagFilter}
     />
 
-    <Box flex="1"bg="surface" p={6}>
+    <Box flex="1" bg="bg.page" borderColor="border.subtle" p={6}>
       <Flex gap={6} w="full"  direction={{ base: "column", lg: "row" }}>
         {/* Main Content Area */}
         <Box flex="1">

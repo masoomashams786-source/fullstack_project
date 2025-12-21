@@ -7,6 +7,7 @@ import NoteCardEditForm from "./notes/NoteCardEditForm";
 import NoteCardHeader from "./notes/NoteCardHeader";
 import NoteCardTags from "./notes/NoteCardTags";
 import AddTagDialog from "./notes/AddTagDialog";
+import { useTextSize } from "../context/TextSizeContext";
 
 export default function NoteCard({
   note,
@@ -39,6 +40,7 @@ export default function NoteCard({
   );
 
   // ------------------ Local states ------------------
+  const { textSize } = useTextSize();
   const [isDeleteNoteOpen, setIsDeleteNoteOpen] = useState(false);
   const [isDeleteTagOpen, setIsDeleteTagOpen] = useState(false);
   const [isArchiveOpen, setIsArchiveOpen] = useState(false);
@@ -254,7 +256,14 @@ export default function NoteCard({
   };
 
   return (
-    <Box p={4} borderWidth="1px" borderRadius="md" shadow="sm" bg="white">
+    <Box
+      p={4}
+      borderWidth="1px"
+      borderRadius="lg"
+      bg="bg.card"
+      borderColor="border.subtle"
+      shadow="sm"
+    >
       {/* Note Editing */}
       {isEditing && !isTrashView ? (
         <NoteCardEditForm
@@ -281,14 +290,14 @@ export default function NoteCard({
           />
 
           {/* Note Content */}
-          <Text mt={3} noOfLines={4} color="gray.700">
+          <Text mt={3} fontSize={textSize} noOfLines={4} color="fg.muted">
             {note.content}
           </Text>
-          <Badge mt={2}>{new Date(note.created_at).toLocaleDateString()}</Badge>
+          <Badge fontSize={textSize} mt={2}>{new Date(note.created_at).toLocaleDateString()}</Badge>
 
           {/* Archive/Unarchive button - Hide in trash view */}
-          {!isTrashView && (
-            isArchivedView ? (
+          {!isTrashView &&
+            (isArchivedView ? (
               <Button
                 mt={2}
                 size="xs"
@@ -308,8 +317,7 @@ export default function NoteCard({
               >
                 Archive
               </Button>
-            )
-          )}
+            ))}
 
           {/* Tags Section */}
           <NoteCardTags

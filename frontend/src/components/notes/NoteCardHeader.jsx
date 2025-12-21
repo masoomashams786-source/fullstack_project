@@ -1,5 +1,6 @@
 import { HStack, Heading, IconButton, Button } from "@chakra-ui/react";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import { useTextSize } from "../../context/TextSizeContext";
 
 export default function NoteCardHeader({
   note,
@@ -9,10 +10,13 @@ export default function NoteCardHeader({
   setIsRecoverOpen,
   setIsDeleteNoteOpen,
   setIsDeleteForeverOpen,
+
+  
 }) {
+   const { textSize, cycleTextSize } = useTextSize();
   return (
     <HStack justify="space-between" align="start">
-      <Heading size="md" color="teal.700">
+      <Heading  size={textSize} color="teal.700">
         {note.title}
       </Heading>
       <HStack spacing={1}>
