@@ -1,55 +1,81 @@
-import React from "react";
+import Logo from "../img/Logo.png";
+import React, { useContext, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { Box, Flex, Heading, Button, HStack } from "@chakra-ui/react";
-import { useContext, useState } from "react";
+import { Box, Flex, Heading, Button, HStack, Image } from "@chakra-ui/react";
 import { AuthContext } from "../pages/auth-context";
 import { ColorModeButton } from "@/components/ui/color-mode";
 import { useTextSize } from "../context/TextSizeContext";
-import { FiType } from "react-icons/fi";
+import { FiType, FiCalendar } from "react-icons/fi";
+import { useSort } from "../context/SortContext";
 
 export default function PrivateLayout() {
   const { user, logout } = useContext(AuthContext);
   const [view, setView] = useState("all-notes");
   const { textSize, cycleTextSize } = useTextSize();
+  const { sortOrder, toggleSortOrder } = useSort();
 
   return (
     <Flex minH="100vh" direction="column">
       <Flex
         as="header"
         bg="teal.600"
-        color="white"
+        position="sticky"
+        top="0"
+        zIndex="1000"
         align="center"
         justify="space-between"
         px={6}
         py={4}
       >
-        <Heading size="md">Welcome to your app {user?.name}!</Heading>
+        <Flex align="center">
+          <Image src={Logo} alt="Logo" boxSize="80px" borderRadius="full" />
+        </Flex>
 
         <HStack spacing={3}>
-          <Button 
-            
+          {/* Sort Button */}
+          <Button
+            onClick={toggleSortOrder}
+            size="sm"
+            color="white"
+            colorPalette="gray"
+            variant="outline"
+            _hover={{
+              bg: "whiteAlpha.200",
+              color: "white",
+            }}
+          >
+            <FiCalendar style={{ marginRight: "3px" }} />:{" "}
+            {sortOrder === "newest" ? "Newest" : "Oldest"}
+          </Button>
+
+          {/* Text Size Button */}
+          <Button
             onClick={cycleTextSize}
             size="sm"
-            colorPalette="gray" variant="surface"
+            color="white"
+            colorPalette="gray"
+            variant="outline"
+            _hover={{
+              bg: "whiteAlpha.200",
+              color: "white",
+            }}
           >
-            <FiType style={{ marginRight: "3px" }} />
-           : {textSize.toUpperCase()}
+            <FiType style={{ marginRight: "3px" }} />: {textSize.toUpperCase()}
           </Button>
-          
-          <ColorModeButton color="white" />
-          
-         
+
+          <ColorModeButton
+            _hover={{
+              bg: "whiteAlpha.200",
+              color: "white",
+            }}
+            color="white"
+          />
         </HStack>
       </Flex>
 
       <Flex flex="1">
         <Outlet context={{ view, setView }} />
       </Flex>
-
-      {/* Footer */}
-      <Box as="footer" textAlign="center" py={4} bg="gray.200">
-        &copy; {new Date().getFullYear()} My App
-      </Box>
     </Flex>
   );
 }

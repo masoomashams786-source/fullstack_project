@@ -5,7 +5,6 @@ import { AuthContext } from "../pages/auth-context";
 export default function ProtectedRoute({ children }) {
   const { isAuthenticated, authLoading } = useContext(AuthContext);
 
-  // ✅ WAIT until auth check finishes
   if (authLoading) {
     return <div>Loading...</div>;
   }

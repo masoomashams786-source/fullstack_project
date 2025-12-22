@@ -10,13 +10,11 @@ export default function NoteCardHeader({
   setIsRecoverOpen,
   setIsDeleteNoteOpen,
   setIsDeleteForeverOpen,
-
-  
 }) {
-   const { textSize, cycleTextSize } = useTextSize();
+  const { textSize, cycleTextSize } = useTextSize();
   return (
     <HStack justify="space-between" align="start">
-      <Heading  size={textSize} color="teal.700">
+      <Heading size={textSize} color="teal.700">
         {note.title}
       </Heading>
       <HStack spacing={1}>
@@ -67,4 +65,3 @@ export default function NoteCardHeader({
     </HStack>
   );
 }
-

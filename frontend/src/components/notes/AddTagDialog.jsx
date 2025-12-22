@@ -72,7 +72,9 @@ export default function AddTagDialog({
                       >
                         <option value="">-- Select a tag --</option>
                         {allTags
-                          .filter((tag) => !noteTags.some((nt) => nt.id === tag.id))
+                          .filter(
+                            (tag) => !noteTags.some((nt) => nt.id === tag.id)
+                          )
                           .map((tag) => (
                             <option key={tag.id} value={tag.id}>
                               {tag.name}
@@ -81,7 +83,11 @@ export default function AddTagDialog({
                       </NativeSelect.Field>
                       <NativeSelect.Indicator />
                     </NativeSelect.Root>
-                    <Button size="sm" colorPalette="teal" onClick={onAddExistingTag}>
+                    <Button
+                      size="sm"
+                      colorPalette="teal"
+                      onClick={onAddExistingTag}
+                    >
                       Add
                     </Button>
                   </HStack>
@@ -115,7 +121,9 @@ export default function AddTagDialog({
                       <Badge
                         key={tag.id || `new-${index}`}
                         colorPalette={
-                          noteTags.some((t) => t.id === tag.id) ? "gray" : "teal"
+                          noteTags.some((t) => t.id === tag.id)
+                            ? "gray"
+                            : "teal"
                         }
                         px={2}
                         py={1}
@@ -160,4 +168,3 @@ export default function AddTagDialog({
     </Dialog.Root>
   );
 }
-

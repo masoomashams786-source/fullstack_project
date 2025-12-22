@@ -28,19 +28,18 @@ export default function NoteForm() {
 
   const formRef = useRef(null);
   useEffect(() => {
-  // only for small screens (mobile)
-  if (window.innerWidth <= 768 && formRef.current) {
-    formRef.current.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+    // only for small screens (mobile)
+    if (window.innerWidth <= 768 && formRef.current) {
+      formRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
 
-    // focus the first input (title)
-    const input = formRef.current.querySelector("input");
-    input?.focus();
-  }
-}, []);
-
+      // focus the first input (title)
+      const input = formRef.current.querySelector("input");
+      input?.focus();
+    }
+  }, []);
 
   useEffect(() => {
     if (userNotes && userNotes.length > 0) {
@@ -167,8 +166,15 @@ export default function NoteForm() {
   const selectedTags = tags.filter((tag) => noteTags.includes(tag.id));
 
   return (
-    <Flex w="100%" justify="center" bg="gray.50" py={10}>
-     <Box ref={formRef} bg="white" p={6} borderRadius="md" shadow="md" w="full">
+    <Flex w="100%" justify="center" bg="bg.page" py={10}>
+      <Box
+        ref={formRef}
+        bg={{ base: "white", _dark: "gray.900" }}
+        p={6}
+        borderRadius="md"
+        shadow="md"
+        w="full"
+      >
         <form onSubmit={handleSubmit}>
           <Stack spacing={4}>
             <Text

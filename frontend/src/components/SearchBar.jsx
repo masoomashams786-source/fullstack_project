@@ -1,16 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  Input,
-  CloseButton,
-  Box,
-  Text,
-  HStack,
-  Kbd,
-} from "@chakra-ui/react";
+import { Input, CloseButton, Box, Text, HStack, Kbd } from "@chakra-ui/react";
 import { FiSearch } from "react-icons/fi";
 import { HiX } from "react-icons/hi";
 
-export default function SearchBar({ onSearch, placeholder = "Search notes..." }) {
+export default function SearchBar({
+  onSearch,
+  placeholder = "Search notes...",
+}) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const inputRef = useRef(null);
@@ -62,7 +58,7 @@ export default function SearchBar({ onSearch, placeholder = "Search notes..." })
         pl={12}
         pr={searchQuery ? 12 : 40}
         size="lg"
-        bg="white"
+        bg={{ base: "white", _dark: "gray.900" }}
         borderColor="gray.300"
         _hover={{ borderColor: "teal.400" }}
         _focus={{
@@ -72,7 +68,7 @@ export default function SearchBar({ onSearch, placeholder = "Search notes..." })
         }}
         aria-label="Search notes"
       />
-      
+
       {/* Search Icon */}
       <Box
         position="absolute"
@@ -84,7 +80,7 @@ export default function SearchBar({ onSearch, placeholder = "Search notes..." })
       >
         <FiSearch size={20} />
       </Box>
-      
+
       {/* Clear Button */}
       {searchQuery && (
         <CloseButton
@@ -100,7 +96,7 @@ export default function SearchBar({ onSearch, placeholder = "Search notes..." })
           <HiX />
         </CloseButton>
       )}
-      
+
       {/* Keyboard Shortcut Hint */}
       {!searchQuery && (
         <HStack

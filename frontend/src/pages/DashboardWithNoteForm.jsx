@@ -11,12 +11,12 @@ export default function DashboardWithNoteForm() {
       </Box>
 
       {/* Right Side Panel - NoteForm */}
-      <Box 
-        w="400px" 
-        position="sticky" 
-        top="0" 
-        h="fit-content" 
-        maxH="100vh" 
+      <Box
+        w="400px"
+        position="sticky"
+        top="0"
+        h="fit-content"
+        maxH="100vh"
         overflowY="auto"
         bg="white"
         p={6}

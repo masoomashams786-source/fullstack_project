@@ -8,6 +8,7 @@ import { ChakraProvider } from "@chakra-ui/react";
 import { ColorModeProvider } from "@/components/ui/color-mode";
 import { Provider } from "@/components/ui/provider";
 import { TextSizeProvider } from "./context/TextSizeContext";
+import { SortProvider } from "./context/SortContext";
 
 import { system } from "./theme";
 
@@ -15,13 +16,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ChakraProvider value={system}>
       {" "}
-      {/* ✅ USE YOUR SYSTEM */}
       <ColorModeProvider>
         <BrowserRouter>
           <Provider>
             <AuthProvider>
               <TextSizeProvider>
-                <App />
+                <SortProvider>
+                  <App />
+                </SortProvider>
               </TextSizeProvider>
             </AuthProvider>
           </Provider>

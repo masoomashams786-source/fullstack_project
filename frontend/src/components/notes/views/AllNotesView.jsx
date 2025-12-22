@@ -1,6 +1,7 @@
 import { Box, SimpleGrid, Skeleton, Heading, Text } from "@chakra-ui/react";
 import { useMemo } from "react";
 import NoteCard from "../../NoteCard";
+import { useSort } from "../../../context/SortContext";
 
 export default function AllNotesView({
   notes,
@@ -21,19 +22,21 @@ export default function AllNotesView({
   onTagsChanged,
   singleColumn = false,
 }) {
-  // Filter and search notes
-  const filteredNotes = useMemo(() => {
-    // Filter out archived notes - only show non-archived notes
+  const { sortOrder } = useSort();
+
+  // Filter and search notes (then sort)
+  const processedNotes = useMemo(() => {
+    // Step 1: Filter out archived notes - only show non-archived notes
     let filtered = notes.filter((note) => !note.is_archived);
 
-    // Apply tag filter
+    // Step 2: Apply tag filter
     if (selectedTagIds.length > 0) {
       filtered = filtered.filter((note) =>
         note.tags.some((tag) => selectedTagIds.includes(tag.id))
       );
     }
 
-    // Apply search filter
+    // Step 3: Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       filtered = filtered.filter((note) => {
@@ -46,8 +49,15 @@ export default function AllNotesView({
       });
     }
 
-    return filtered;
-  }, [notes, selectedTagIds, searchQuery]);
+    // Step 4: Sort by date (after all filtering is done)
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = new Date(a.created_at);
+      const dateB = new Date(b.created_at);
+      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+    });
+
+    return sorted;
+  }, [notes, selectedTagIds, searchQuery, sortOrder]);
 
   if (isLoading) {
     return (
@@ -62,28 +72,31 @@ export default function AllNotesView({
     );
   }
 
-  if (filteredNotes.length === 0) {
+  if (processedNotes.length === 0) {
     return (
       <Box textAlign="center" py={24} color="gray.600">
         <Heading color="teal.600" mb={4}>
           {searchQuery.trim() ? "No Results Found" : "No Notes"}
         </Heading>
-        <p>
+        <Text>
           {searchQuery.trim()
             ? "No notes match your search query."
             : "Create your first note to get started."}
-        </p>
+        </Text>
       </Box>
     );
   }
 
   return (
-    <SimpleGrid columns={
-    singleColumn 
-      ? { base: 1 }  // 1 column when form is shown
-      : { base: 1, md: 2, lg: 3 }  // Responsive: 1 on mobile, 2 on tablet, 3 on desktop
-  }  gap={6}>
-      {filteredNotes.map((note) => (
+    <SimpleGrid
+      columns={
+        singleColumn
+          ? { base: 1 } // 1 column when form is shown
+          : { base: 1, md: 2, lg: 3 } // Responsive: 1 on mobile, 2 on tablet, 3 on desktop
+      }
+      gap={6}
+    >
+      {processedNotes.map((note) => (
         <NoteCard
           key={note.id}
           note={note}
@@ -105,4 +118,3 @@ export default function AllNotesView({
     </SimpleGrid>
   );
 }
-

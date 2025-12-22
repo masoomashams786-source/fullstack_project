@@ -15,7 +15,7 @@ export default function NoteCardTags({
   setEditingTagName,
 }) {
   // Read-only tags for trash view
-   const { textSize, cycleTextSize } = useTextSize();
+  const { textSize, cycleTextSize } = useTextSize();
   if (isTrashView && noteTags && noteTags.length > 0) {
     return (
       <HStack mt={3} spacing={2} wrap="wrap">
@@ -67,11 +67,7 @@ export default function NoteCardTags({
                   bg="white"
                   color="black"
                 />
-                <Button
-                  size="xs"
-                  colorPalette="green"
-                  onClick={onEditTagSave}
-                >
+                <Button size="xs" colorPalette="green" onClick={onEditTagSave}>
                   Save
                 </Button>
                 <Button
@@ -128,4 +124,3 @@ export default function NoteCardTags({
 
   return null;
 }
-

@@ -1,5 +1,5 @@
 import { Box, Text, Badge, Button } from "@chakra-ui/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ConfirmDialog from "./confirmDialog";
 import api from "../api/axios";
 import useSWRMutation from "swr/mutation";
@@ -63,6 +63,12 @@ export default function NoteCard({
   const [tagsToAdd, setTagsToAdd] = useState([]);
   const [tagAlert, setTagAlert] = useState(null);
   const currentTagsInDialog = [...noteTags, ...tagsToAdd];
+
+  useEffect(() => {
+    setLocalTitle(note.title);
+    setLocalContent(note.content);
+    setNoteTags(note.tags || []);
+  }, [note]);
 
   // ------------------ Handlers ------------------
   const handleOpenTagDialog = (isOpen) => {
@@ -260,9 +266,10 @@ export default function NoteCard({
       p={4}
       borderWidth="1px"
       borderRadius="lg"
-      bg="bg.card"
       borderColor="border.subtle"
       shadow="sm"
+      bg={{ base: "white", _dark: "gray.900" }}
+      borderRightWidth="1px"
     >
       {/* Note Editing */}
       {isEditing && !isTrashView ? (
@@ -293,7 +300,9 @@ export default function NoteCard({
           <Text mt={3} fontSize={textSize} noOfLines={4} color="fg.muted">
             {note.content}
           </Text>
-          <Badge fontSize={textSize} mt={2}>{new Date(note.created_at).toLocaleDateString()}</Badge>
+          <Badge fontSize={textSize} mt={2}>
+            {new Date(note.created_at).toLocaleDateString()}
+          </Badge>
 
           {/* Archive/Unarchive button - Hide in trash view */}
           {!isTrashView &&
@@ -305,7 +314,7 @@ export default function NoteCard({
                 colorPalette="blue"
                 onClick={() => setIsUnarchiveOpen(true)}
               >
-                Unarchive
+                Unarchive?
               </Button>
             ) : (
               <Button
@@ -315,7 +324,7 @@ export default function NoteCard({
                 colorPalette="blue"
                 onClick={() => setIsArchiveOpen(true)}
               >
-                Archive
+                Archive?
               </Button>
             ))}
 

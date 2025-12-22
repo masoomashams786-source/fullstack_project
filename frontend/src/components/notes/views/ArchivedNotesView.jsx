@@ -1,4 +1,11 @@
-import { Box, SimpleGrid, Skeleton, Alert, Button, Heading } from "@chakra-ui/react";
+import {
+  Box,
+  SimpleGrid,
+  Skeleton,
+  Alert,
+  Button,
+  Heading,
+} from "@chakra-ui/react";
 import { useMemo } from "react";
 import NoteCard from "../../NoteCard";
 
@@ -62,31 +69,31 @@ export default function ArchivedNotesView({
     );
   }
 
-    if (notes.length === 0) {
-      return (
-        <Box textAlign="center" py={24} color="gray.600">
-          <Heading color="teal.600" mb={4}>
-            No Archived Notes
-          </Heading>
-          <p>You haven't archived any notes yet.</p>
-        </Box>
-      );
-    }
-
-    if (searchQuery.trim() && filteredNotes.length === 0) {
-      return (
-        <Box textAlign="center" py={24} color="gray.600">
-          <Heading color="teal.600" mb={4}>
-            No Results Found
-          </Heading>
-          <p>No archived notes match your search query.</p>
-        </Box>
-      );
-    }
-
+  if (notes.length === 0) {
     return (
-      <SimpleGrid columns={{ md: 3 }} gap={6}>
-        {filteredNotes.map((note) => (
+      <Box textAlign="center" py={24} color="gray.600">
+        <Heading color="teal.600" mb={4}>
+          No Archived Notes
+        </Heading>
+        <p>You haven't archived any notes yet.</p>
+      </Box>
+    );
+  }
+
+  if (searchQuery.trim() && filteredNotes.length === 0) {
+    return (
+      <Box textAlign="center" py={24} color="gray.600">
+        <Heading color="teal.600" mb={4}>
+          No Results Found
+        </Heading>
+        <p>No archived notes match your search query.</p>
+      </Box>
+    );
+  }
+
+  return (
+    <SimpleGrid columns={{ md: 3 }} gap={6}>
+      {filteredNotes.map((note) => (
         <NoteCard
           key={note.id}
           note={note}
@@ -108,4 +115,3 @@ export default function ArchivedNotesView({
     </SimpleGrid>
   );
 }
-

@@ -1,16 +1,26 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
+import background from "../img/background.png";
+
 import {
   Box,
   Button,
-  ButtonGroup,
   Field,
   Fieldset,
+  Grid,
+  GridItem,
   Input,
   Spinner,
+  Text,
   Stack,
+  Link,
+  VStack,
+  Card,
+  Heading,
   Alert,
 } from "@chakra-ui/react";
+
 import useSWRMutation from "swr/mutation";
 import api from "../api/axios";
 
@@ -39,7 +49,7 @@ function Signup() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "password" ? value : value.trim(),
+      [name]: value.trim(),
     }));
   };
 
@@ -53,14 +63,6 @@ function Signup() {
 
     if (username.length < 3 || username.length > 20) {
       setError("Username must be between 3 and 20 characters.");
-      return false;
-    }
-
-    const usernameRegex = /^[a-zA-Z0-9._-]+$/;
-    if (!usernameRegex.test(username)) {
-      setError(
-        "Username can only contain letters, numbers, underscore (_), dot (.), or hyphen (-)."
-      );
       return false;
     }
 
@@ -83,119 +85,123 @@ function Signup() {
     setError("");
     setSuccess("");
 
-    if (!validateForm()) {
-      return;
-    }
-
-    const { username, email, password } = formData;
+    if (!validateForm()) return;
 
     try {
-      const data = await signupTrigger({
-        username,
-        email,
-        password,
-      });
-
+      const data = await signupTrigger(formData);
       setSuccess(data.message || "Signup successful!");
-      setFormData({ username: "", email: "", password: "" });
 
       setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
-      // Handle backend errors
-      if (err.response?.data?.errors) {
-        // Pydantic validation errors
-        const validationErrors = err.response.data.errors
-          .map((e) => Object.values(e)[0])
-          .join(" ");
-        setError(validationErrors);
-      } else if (err.response?.data?.error) {
-        setError(err.response.data.error);
-      } else {
-        setError("Signup failed.");
-      }
+      setError(err.response?.data?.error || "Signup failed.");
     }
   };
 
   return (
-    <Box
-      p={8}
-      borderWidth="1px"
-      borderRadius="md"
-      maxW="500px"
-      mx="auto"
-      mt="70px"
-      boxShadow="lg"
-      bg="whiteAlpha.100"
-    >
-      <form onSubmit={handleSubmit}>
-        <Fieldset.Root size="lg" maxW="md">
-          <Stack spacing={4}>
-            <Fieldset.Legend>Signup</Fieldset.Legend>
+    <Grid templateColumns={{ base: "1fr", lg: "2fr 1fr" }} minH="100vh">
+      {/* ================= LEFT IMAGE (Desktop Only) ================= */}
+      <GridItem
+        display={{ base: "none", lg: "block" }}
+        bgImage={`url(${background})`}
+        bgSize="cover"
+        bgPosition="center"
+      />
 
-            {error && (
-              <Alert.Root status="error">
-                <Alert.Indicator />
-                <Alert.Content>
-                  <Alert.Title>Invalid Fields</Alert.Title>
-                  <Alert.Description>{error}</Alert.Description>
-                </Alert.Content>
-              </Alert.Root>
-            )}
+      {/* ================= RIGHT FORM ================= */}
+      <GridItem
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        bgGradient="linear(to-br, blue.50, cyan.50)"
+        px={{ base: 4, md: 8 }}
+      >
+        <Box w="100%" maxW="420px">
+          <Card.Root bg="white" borderRadius="xl" boxShadow="xl" p={6}>
+            <Card.Header>
+              <VStack spacing={1}>
+                <Heading size="lg">Create Account</Heading>
+                <Text color="gray.600">Join Notionflow today</Text>
+              </VStack>
+            </Card.Header>
 
-            {success && (
-              <Alert.Root status="success" variant="subtle">
-                <Alert.Indicator />
-                <Alert.Title>{success}</Alert.Title>
-              </Alert.Root>
-            )}
-          </Stack>
+            <Card.Body>
+              <form onSubmit={handleSubmit}>
+                <Fieldset.Root>
+                  <Stack spacing={4}>
+                    {error && (
+                      <Alert.Root status="error">
+                        <Alert.Description>{error}</Alert.Description>
+                      </Alert.Root>
+                    )}
 
-          <Fieldset.Content>
-            <Field.Root>
-              <Field.Label>Username</Field.Label>
-              <Input
-                name="username"
-                placeholder="Your username"
-                value={formData.username}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </Field.Root>
+                    {success && (
+                      <Alert.Root status="success">
+                        <Alert.Description>{success}</Alert.Description>
+                      </Alert.Root>
+                    )}
 
-            <Field.Root>
-              <Field.Label>Email</Field.Label>
-              <Input
-                name="email"
-                type="email"
-                placeholder="you@example.com"
-                value={formData.email}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </Field.Root>
+                    <Field.Root>
+                      <Field.Label>Username</Field.Label>
+                      <Input
+                        name="username"
+                        value={formData.username}
+                        onChange={handleChange}
+                        disabled={loading}
+                      />
+                    </Field.Root>
 
-            <Field.Root>
-              <Field.Label>Password</Field.Label>
-              <Input
-                name="password"
-                type="password"
-                placeholder="Enter password"
-                value={formData.password}
-                onChange={handleChange}
-                disabled={loading}
-              />
-            </Field.Root>
-          </Fieldset.Content>
+                    <Field.Root>
+                      <Field.Label>Email</Field.Label>
+                      <Input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleChange}
+                        disabled={loading}
+                      />
+                    </Field.Root>
 
-          <ButtonGroup colorPalette="blue">
+                    <Field.Root>
+                      <Field.Label>Password</Field.Label>
+                      <Input
+                        type="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        disabled={loading}
+                      />
+                    </Field.Root>
 
-          <Button type="submit" mt={4}  colorPalette="blue" disabled={loading}>
-            {loading ? <Spinner loading loadingText="Loading" spinnerPlacement="start" size="sm" /> : "Sign Up"}
-          </Button>
-          </ButtonGroup>
-        </Fieldset.Root>
-      </form>
-    </Box>
+                    <Button
+                      type="submit"
+                      colorPalette="blue"
+                      w="full"
+                      disabled={loading}
+                    >
+                      {loading ? <Spinner size="sm" /> : "Sign Up"}
+                    </Button>
+                  </Stack>
+                </Fieldset.Root>
+              </form>
+            </Card.Body>
+
+            <Card.Footer justifyContent="center">
+              <Text fontSize="sm">
+                Already have an account?{" "}
+                <Link
+                  as={RouterLink}
+                  to="/login"
+                  color="blue.500"
+                  fontWeight="medium"
+                >
+                  Sign in
+                </Link>
+              </Text>
+            </Card.Footer>
+          </Card.Root>
+        </Box>
+      </GridItem>
+    </Grid>
   );
 }
 

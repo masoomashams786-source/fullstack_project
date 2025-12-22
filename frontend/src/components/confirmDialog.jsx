@@ -1,10 +1,4 @@
-import {
-  Button,
-  CloseButton,
-  Dialog,
-  Portal,
-  Text,
-} from "@chakra-ui/react";
+import { Button, CloseButton, Dialog, Portal, Text } from "@chakra-ui/react";
 
 export default function ConfirmDialog({
   isOpen,
@@ -28,9 +22,7 @@ export default function ConfirmDialog({
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
-              <Dialog.Title color="red.500">
-                {title}
-              </Dialog.Title>
+              <Dialog.Title color="red.500">{title}</Dialog.Title>
             </Dialog.Header>
 
             <Dialog.Body>
@@ -39,9 +31,7 @@ export default function ConfirmDialog({
 
             <Dialog.Footer gap={3}>
               <Dialog.ActionTrigger asChild>
-                <Button variant="outline">
-                  Cancel
-                </Button>
+                <Button variant="outline">Cancel</Button>
               </Dialog.ActionTrigger>
 
               <Button

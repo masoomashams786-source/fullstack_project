@@ -11,7 +11,7 @@ export default function NoteCardEditForm({
   setLocalTitle,
   setLocalContent,
 }) {
-   const { textSize, cycleTextSize } = useTextSize();
+  const { textSize, cycleTextSize } = useTextSize();
   return (
     <Stack key={`edit-${note.id}`} gap={2}>
       <Input
@@ -21,7 +21,7 @@ export default function NoteCardEditForm({
         placeholder="Note title"
       />
       <Textarea
-      size={textSize}
+        size={textSize}
         value={localContent}
         onChange={(e) => setLocalContent(e.target.value)}
         placeholder="Note content"
@@ -47,4 +47,3 @@ export default function NoteCardEditForm({
     </Stack>
   );
 }
-

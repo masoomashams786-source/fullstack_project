@@ -32,7 +32,7 @@ export default function Dashboard({ showNoteForm = false }) {
   const { view, setView } = useOutletContext();
 
   const authData = useAuth();
-  console.log(authData)
+  console.log(authData);
 
   /* ------------------ Notes SWR ------------------ */
   const {
@@ -203,7 +203,11 @@ export default function Dashboard({ showNoteForm = false }) {
         await mutateTrashNotes();
       } else {
         apiError(
-          { response: { data: { error: res?.error || "Failed to delete note" } } },
+          {
+            response: {
+              data: { error: res?.error || "Failed to delete note" },
+            },
+          },
           "delete note"
         );
       }
@@ -215,13 +219,11 @@ export default function Dashboard({ showNoteForm = false }) {
   };
 
   /* ------------------ Archive Note Mutation ------------------ */
-  const { trigger: archiveNoteTrigger, isMutating: isArchiving } = useSWRMutation(
-    "/notes/archive",
-    async (url, { arg }) => {
+  const { trigger: archiveNoteTrigger, isMutating: isArchiving } =
+    useSWRMutation("/notes/archive", async (url, { arg }) => {
       const res = await api.put(`/notes/${arg}/archive`);
       return res.data;
-    }
-  );
+    });
 
   const archiveNote = async (id) => {
     setOperatingId(id);
@@ -233,7 +235,11 @@ export default function Dashboard({ showNoteForm = false }) {
         await mutateArchivedNotes();
       } else {
         apiError(
-          { response: { data: { error: res?.error || "Failed to archive note" } } },
+          {
+            response: {
+              data: { error: res?.error || "Failed to archive note" },
+            },
+          },
           "archive note"
         );
       }
@@ -245,13 +251,11 @@ export default function Dashboard({ showNoteForm = false }) {
   };
 
   /* ------------------ Unarchive Note Mutation ------------------ */
-  const { trigger: unarchiveNoteTrigger, isMutating: isUnarchiving } = useSWRMutation(
-    "/notes/unarchive",
-    async (url, { arg }) => {
+  const { trigger: unarchiveNoteTrigger, isMutating: isUnarchiving } =
+    useSWRMutation("/notes/unarchive", async (url, { arg }) => {
       const res = await api.put(`/notes/${arg}/unarchive`);
       return res.data;
-    }
-  );
+    });
 
   const unarchiveNote = async (id) => {
     setOperatingId(id);
@@ -263,7 +267,11 @@ export default function Dashboard({ showNoteForm = false }) {
         await mutateArchivedNotes();
       } else {
         apiError(
-          { response: { data: { error: res?.error || "Failed to unarchive note" } } },
+          {
+            response: {
+              data: { error: res?.error || "Failed to unarchive note" },
+            },
+          },
           "unarchive note"
         );
       }
@@ -293,7 +301,11 @@ export default function Dashboard({ showNoteForm = false }) {
         await mutateTrashNotes();
       } else {
         apiError(
-          { response: { data: { error: res?.error || "Failed to recover note" } } },
+          {
+            response: {
+              data: { error: res?.error || "Failed to recover note" },
+            },
+          },
           "recover note"
         );
       }
@@ -322,7 +334,11 @@ export default function Dashboard({ showNoteForm = false }) {
         await mutateTrashNotes();
       } else {
         apiError(
-          { response: { data: { error: res?.error || "Failed to delete note forever" } } },
+          {
+            response: {
+              data: { error: res?.error || "Failed to delete note forever" },
+            },
+          },
           "delete note forever"
         );
       }
@@ -341,133 +357,135 @@ export default function Dashboard({ showNoteForm = false }) {
     }
   };
 
- return (
-  <Flex flex="1">
-    <Toaster />
-    <Sidebar
-      collapsed={collapsed}
-      allTags={allTags}
-      onSelect={setView}
-      currentFilterTagIds={selectedTagIds}
-      onApplyFilter={applyTagFilter}
-    />
+  return (
+    <Flex flex="1">
+      <Toaster />
+      <Sidebar
+        collapsed={collapsed}
+        allTags={allTags}
+        onSelect={setView}
+        currentFilterTagIds={selectedTagIds}
+        onApplyFilter={applyTagFilter}
+      />
 
-    <Box flex="1" bg="bg.page" borderColor="border.subtle" p={6}>
-      <Flex gap={6} w="full"  direction={{ base: "column", lg: "row" }}>
-        {/* Main Content Area */}
-        <Box flex="1">
-          <Container maxW={showNoteForm ? "full" : "container.lg"}>
-            <Stack gap={8}>
-              {/* Search Bar - Show for views that display notes */}
-              {(view === "all-notes" || view === "archived" || view === "trash") && (
-                <SearchBar
-                  onSearch={setSearchQuery}
-                  placeholder={
-                    view === "archived"
-                      ? "Search archived notes..."
-                      : view === "trash"
-                      ? "Search trash..."
-                      : "Search notes..."
-                  }
-                />
-              )}
+      <Box flex="1" bg="bg.page" borderColor="border.subtle" p={6}>
+        <Flex gap={6} w="full" direction={{ base: "column", lg: "row" }}>
+          {/* Main Content Area */}
+          <Box flex="1">
+            <Container maxW={showNoteForm ? "full" : "container.lg"}>
+              <Stack gap={8}>
+                {/* Search Bar - Show for views that display notes */}
+                {(view === "all-notes" ||
+                  view === "archived" ||
+                  view === "trash") && (
+                  <SearchBar
+                    onSearch={setSearchQuery}
+                    placeholder={
+                      view === "archived"
+                        ? "Search archived notes..."
+                        : view === "trash"
+                        ? "Search trash..."
+                        : "Search notes..."
+                    }
+                  />
+                )}
 
-              {error && (
-                <Alert.Root status="error">
-                  <Alert.Indicator />
-                  <Alert.Title>Unable to load notes</Alert.Title>
-                  <Alert.Description>
-                    <Button
-                      size="xs"
-                      variant="outline"
-                      onClick={() => mutateNotes()}
-                    >
-                      Retry
-                    </Button>
-                  </Alert.Description>
-                </Alert.Root>
-              )}
+                {error && (
+                  <Alert.Root status="error">
+                    <Alert.Indicator />
+                    <Alert.Title>Unable to load notes</Alert.Title>
+                    <Alert.Description>
+                      <Button
+                        size="xs"
+                        variant="outline"
+                        onClick={() => mutateNotes()}
+                      >
+                        Retry
+                      </Button>
+                    </Alert.Description>
+                  </Alert.Root>
+                )}
 
-              {view === "welcome" && !showNoteForm && <WelcomeView />}
-              
-              {(view === "all-notes" || showNoteForm) && (
-                <AllNotesView
-                  notes={notes}
-                  isLoading={isLoading}
-                  selectedTagIds={selectedTagIds}
-                  searchQuery={searchQuery}
-                  editingNoteId={editingNoteId}
-                  operatingId={operatingId}
-                  onEdit={startEdit}
-                  onDelete={deleteNote}
-                  onArchive={archiveNote}
-                  onUpdate={updateNote}
-                  onCancel={cancelEdit}
-                  onEditTag={handleEditTag}
-                  allTags={allTags}
-                  onAlertError={apiError}
-                  onAlertSuccess={success}
-                  onTagsChanged={handleNoteTagsUpdated}
-                  singleColumn={showNoteForm}
-                />
-              )}
-              
-              {view === "archived" && !showNoteForm && (
-                <ArchivedNotesView
-                  notes={archivedNotes}
-                  isLoading={isArchivedLoading}
-                  error={archivedError}
-                  searchQuery={searchQuery}
-                  onUnarchive={unarchiveNote}
-                  onEdit={startEdit}
-                  onDelete={deleteNote}
-                  editingNoteId={editingNoteId}
-                  onUpdate={updateNote}
-                  onCancel={cancelEdit}
-                  operatingId={operatingId}
-                  onEditTag={handleEditTag}
-                  allTags={allTags}
-                  onAlertError={apiError}
-                  onAlertSuccess={success}
-                  onTagsChanged={handleNoteTagsUpdated}
-                  onRetry={() => mutateArchivedNotes()}
-                />
-              )}
-              
-              {view === "trash" && !showNoteForm && (
-                <TrashNotesView
-                  notes={trashNotes}
-                  isLoading={isTrashLoading}
-                  error={trashError}
-                  searchQuery={searchQuery}
-                  onRecover={recoverNote}
-                  onDeleteForever={deleteForever}
-                  operatingId={operatingId}
-                  allTags={allTags}
-                  onAlertError={apiError}
-                  onAlertSuccess={success}
-                  onRetry={() => mutateTrashNotes()}
-                />
-              )}
-            </Stack>
-          </Container>
-        </Box>
+                {view === "welcome" && !showNoteForm && <WelcomeView />}
 
-        {/* Right Side Panel - NoteForm */}
-        {showNoteForm && (
-          <Box 
-            w={{ base: "full", lg: "400px" }} 
-            position={{ base: "relative", lg: "sticky" }} 
-            top="0" 
-            h={{ base: "auto", lg: "calc(100vh - 120px)" }}
-            overflowY="auto"
-            flexShrink={0}
-          >
-            <NoteForm />
+                {(view === "all-notes" || showNoteForm) && (
+                  <AllNotesView
+                    notes={notes}
+                    isLoading={isLoading}
+                    selectedTagIds={selectedTagIds}
+                    searchQuery={searchQuery}
+                    editingNoteId={editingNoteId}
+                    operatingId={operatingId}
+                    onEdit={startEdit}
+                    onDelete={deleteNote}
+                    onArchive={archiveNote}
+                    onUpdate={updateNote}
+                    onCancel={cancelEdit}
+                    onEditTag={handleEditTag}
+                    allTags={allTags}
+                    onAlertError={apiError}
+                    onAlertSuccess={success}
+                    onTagsChanged={handleNoteTagsUpdated}
+                    singleColumn={showNoteForm}
+                  />
+                )}
+
+                {view === "archived" && !showNoteForm && (
+                  <ArchivedNotesView
+                    notes={archivedNotes}
+                    isLoading={isArchivedLoading}
+                    error={archivedError}
+                    searchQuery={searchQuery}
+                    onUnarchive={unarchiveNote}
+                    onEdit={startEdit}
+                    onDelete={deleteNote}
+                    editingNoteId={editingNoteId}
+                    onUpdate={updateNote}
+                    onCancel={cancelEdit}
+                    operatingId={operatingId}
+                    onEditTag={handleEditTag}
+                    allTags={allTags}
+                    onAlertError={apiError}
+                    onAlertSuccess={success}
+                    onTagsChanged={handleNoteTagsUpdated}
+                    onRetry={() => mutateArchivedNotes()}
+                  />
+                )}
+
+                {view === "trash" && !showNoteForm && (
+                  <TrashNotesView
+                    notes={trashNotes}
+                    isLoading={isTrashLoading}
+                    error={trashError}
+                    searchQuery={searchQuery}
+                    onRecover={recoverNote}
+                    onDeleteForever={deleteForever}
+                    operatingId={operatingId}
+                    allTags={allTags}
+                    onAlertError={apiError}
+                    onAlertSuccess={success}
+                    onRetry={() => mutateTrashNotes()}
+                  />
+                )}
+              </Stack>
+            </Container>
           </Box>
-        )}
-      </Flex>
-    </Box>
-  </Flex>
-);
+
+          {/* Right Side Panel - NoteForm */}
+          {showNoteForm && (
+            <Box
+              w={{ base: "full", lg: "400px" }}
+              position={{ base: "relative", lg: "sticky" }}
+              top="0"
+              h={{ base: "auto", lg: "calc(100vh - 120px)" }}
+              overflowY="auto"
+              flexShrink={0}
+            >
+              <NoteForm />
+            </Box>
+          )}
+        </Flex>
+      </Box>
+    </Flex>
+  );
 }
