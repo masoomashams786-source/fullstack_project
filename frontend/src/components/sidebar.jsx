@@ -19,6 +19,7 @@ import {
 import { AuthContext } from "../pages/auth-context";
 import { Link } from "react-router-dom";
 import SidebarTags from "./SidebarTags";
+import SidebarSettings from "./SidebarSettings";
 
 export default function Sidebar({
   collapsed = false,
@@ -134,6 +135,7 @@ export default function Sidebar({
 
         <Box>
           <Separator mb={4} borderColor="gray.200" />
+          <SidebarSettings collapsed={collapsed} />
           <Button
             variant="ghost"
             width="full"
