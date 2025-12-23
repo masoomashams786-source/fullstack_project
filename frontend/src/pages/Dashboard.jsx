@@ -252,7 +252,7 @@ export default function Dashboard({ showNoteForm = false }) {
               overflowY="auto"
               flexShrink={0}
             >
-              <NoteForm />
+             <NoteForm allTags={allTags} /> 
             </Box>
           )}
         </Flex>

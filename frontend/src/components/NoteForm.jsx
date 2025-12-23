@@ -1,8 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import useSWR, { mutate } from "swr";
-import { fetcher } from "../api/axios";
+import { mutate } from "swr";
 import {
   Box,
   Stack,
@@ -17,43 +16,22 @@ import {
 } from "@chakra-ui/react";
 import { toaster } from "./ui/toaster";
 
-export default function NoteForm() {
+export default function NoteForm({ allTags = [] }) {
+  // ← ACCEPT PROP
   const navigate = useNavigate();
-  // Fetch notes to extract tags
-  const { data: notesData, isLoading } = useSWR("/notes", fetcher);
-  const userNotes = notesData?.notes || [];
-
-  // Extract unique tags from all notes
-  const [tags, setTags] = useState([]);
-
   const formRef = useRef(null);
+
+  // Auto-scroll and focus on mobile
   useEffect(() => {
-    // only for small screens (mobile)
     if (window.innerWidth <= 768 && formRef.current) {
       formRef.current.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
-
-      // focus the first input (title)
       const input = formRef.current.querySelector("input");
       input?.focus();
     }
   }, []);
-
-  useEffect(() => {
-    if (userNotes && userNotes.length > 0) {
-      const notesTags = userNotes.map((n) => n.tags).flat();
-      const uniqueTags = [];
-      notesTags.forEach((tag) => {
-        const tagExist = uniqueTags.find((t) => t.id === tag.id);
-        if (!tagExist) {
-          uniqueTags.push(tag);
-        }
-      });
-      setTags(uniqueTags);
-    }
-  }, [userNotes]);
 
   // Form state
   const [title, setTitle] = useState("");
@@ -62,6 +40,9 @@ export default function NoteForm() {
   const [selectedTagId, setSelectedTagId] = useState("");
   const [newTag, setNewTag] = useState("");
   const [error, setError] = useState("");
+
+  // Use allTags from Dashboard prop
+  const tags = allTags; // ← USE PROP INSTEAD OF LOCAL STATE
 
   // Add existing tag to note
   const handleSelectTag = () => {
@@ -84,7 +65,7 @@ export default function NoteForm() {
     const name = newTag.trim().toLowerCase();
     if (!name) return;
 
-    // Check if tag already exists in the global tags list
+    // Check if tag already exists
     if (tags.some((t) => t.name.toLowerCase() === name)) {
       setError("This tag already exists. Please select it from the dropdown.");
       return;
@@ -93,9 +74,6 @@ export default function NoteForm() {
     try {
       const res = await api.post("/tags", { name });
       const newTagObj = res.data.tag;
-
-      // Add to local tags list
-      setTags([...tags, newTagObj]);
 
       // Add to note's tags
       setNoteTags([...noteTags, newTagObj.id]);
@@ -129,13 +107,11 @@ export default function NoteForm() {
     const noteData = {
       title,
       content,
-      tag_ids: noteTags, // Array of tag IDs
+      tag_ids: noteTags,
     };
 
     try {
       await api.post("/notes", noteData);
-
-      // Revalidate notes cache
       await mutate("/notes");
 
       toaster.create({
@@ -154,14 +130,6 @@ export default function NoteForm() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <Flex w="100%" justify="center" bg="gray.50" py={10}>
-        <Text>Loading tags...</Text>
-      </Flex>
-    );
-  }
-
   // Get selected tag objects for display
   const selectedTags = tags.filter((tag) => noteTags.includes(tag.id));
 
@@ -171,8 +139,10 @@ export default function NoteForm() {
         ref={formRef}
         bg={{ base: "white", _dark: "gray.900" }}
         p={6}
-        borderRadius="md"
-        shadow="md"
+        borderRadius="lg"
+        shadow="sm"
+        borderWidth="2px"
+        borderColor="border.subtle"
         w="full"
       >
         <form onSubmit={handleSubmit}>
