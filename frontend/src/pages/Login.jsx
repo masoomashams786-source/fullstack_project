@@ -92,7 +92,7 @@ function Login() {
         px={{ base: 4, md: 8 }}
       >
         <Box w="100%" maxW="420px">
-          <Card.Root bg="white" borderRadius="xl" boxShadow="xl" p={6}>
+          <Card.Root  borderRadius="xl" boxShadow="xl" p={6}>
             <Card.Header>
               <VStack spacing={1}>
                 <Heading size="lg">Welcome Back</Heading>
