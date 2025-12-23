@@ -1,17 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
-import {
-  Box,
-  Button,
-  Container,
-  Heading,
-  SimpleGrid,
-  Stack,
-  Text,
-  Skeleton,
-  Alert,
-  Flex,
-} from "@chakra-ui/react";
+import { Box, Button, Container, Stack, Alert, Flex } from "@chakra-ui/react";
 import { Toaster, toaster } from "@/components/ui/toaster";
 import api from "../api/axios";
 import NoteForm from "@/components/NoteForm";
@@ -21,91 +10,19 @@ import WelcomeView from "@/components/notes/views/WelcomeView";
 import AllNotesView from "@/components/notes/views/AllNotesView";
 import ArchivedNotesView from "@/components/notes/views/ArchivedNotesView";
 import TrashNotesView from "@/components/notes/views/TrashNotesView";
-import useSWR, { mutate } from "swr";
-import { fetcher } from "../api/axios";
-import useSWRMutation from "swr/mutation";
-import { useAuth } from "./auth-context";
-
-/* ===================== DASHBOARD ===================== */
+import { useNotes } from "../hooks/useNotes";
+import { useArchivedNotes } from "../hooks/useArchivedNotes";
+import { useTrashNotes } from "../hooks/useTrashNotes";
 
 export default function Dashboard({ showNoteForm = false }) {
   const { view, setView } = useOutletContext();
-
-  const authData = useAuth();
-  console.log(authData);
-
-  /* ------------------ Notes SWR ------------------ */
-  const {
-    data,
-    error,
-    isLoading,
-    mutate: mutateNotes,
-  } = useSWR("/notes", fetcher);
-
-  const notes = data?.notes ?? [];
-
-  /* ------------------ Archived Notes SWR ------------------ */
-  const {
-    data: archivedData,
-    error: archivedError,
-    isLoading: isArchivedLoading,
-    mutate: mutateArchivedNotes,
-  } = useSWR("/notes/archived", fetcher);
-
-  const archivedNotes = archivedData?.notes ?? [];
-
-  /* ------------------ Trash Notes SWR ------------------ */
-  const {
-    data: trashData,
-    error: trashError,
-    isLoading: isTrashLoading,
-    mutate: mutateTrashNotes,
-  } = useSWR("/notes/trash", fetcher);
-
-  const trashNotes = trashData?.notes ?? [];
-
-  /* ------------------ Editing Notes ------------------ */
-  const [editingNoteId, setEditingNoteId] = useState(null);
-  const [editError, setEditError] = useState(null);
-  const [operatingId, setOperatingId] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
-
-  /* ------------------ Tags ------------------ */
   const [selectedTagIds, setSelectedTagIds] = useState([]);
-
-  /* ------------------ Search ------------------ */
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ✅ SAFE DEFAULT so tagsResponse is never undefined
-  // Include tags from regular, archived, and trash notes
-  const allTags = useMemo(() => {
-    const tagMap = {};
-    [...notes, ...archivedNotes, ...trashNotes].forEach((note) => {
-      note.tags.forEach((tag) => {
-        if (!tagMap[tag.name]) tagMap[tag.name] = tag; // pick first instance
-      });
-    });
-    return Object.values(tagMap);
-  }, [notes, archivedNotes, trashNotes]);
-
-  /* ------------------ Tag Handlers ------------------ */
-  const handleEditTag = async (tagId, newName) => {
-    const trimmedName = newName.trim();
-    if (!trimmedName) return;
-
-    try {
-      await api.put(`/tags/${tagId}`, { name: trimmedName });
-      await mutateNotes();
-      success("Tag updated successfully");
-    } catch (err) {
-      apiError(err, "update tag");
-    }
-  };
-
-  /* ------------------ Helpers ------------------ */
+  // Helper functions
   const apiError = (err, action) => {
     console.error(err);
-
     if (err.response?.status === 401) {
       toaster.create({
         title: "Session Expired",
@@ -116,7 +33,6 @@ export default function Dashboard({ showNoteForm = false }) {
       setTimeout(() => window.location.reload(), 1500);
       return;
     }
-
     toaster.create({
       title: `Failed to ${action}`,
       description: err.response?.data?.error || "Something went wrong",
@@ -124,237 +40,101 @@ export default function Dashboard({ showNoteForm = false }) {
     });
   };
 
-  const success = (msg) => {
-    toaster.create({ title: msg, type: "success" });
+  const success = (msg) => toaster.create({ title: msg, type: "success" });
+
+  // Custom hooks
+  const {
+    notes,
+    isLoading,
+    error,
+    editingNoteId,
+    setEditingNoteId,
+    operatingId: notesOperatingId,
+    createNote,
+    updateNote,
+    deleteNote,
+    mutateNotes,
+  } = useNotes(success, apiError);
+
+  const {
+    archivedNotes,
+    isArchivedLoading,
+    archivedError,
+    archiveNote,
+    unarchiveNote,
+    mutateArchivedNotes,
+    operatingId: archivedOperatingId,
+  } = useArchivedNotes(success, apiError);
+
+  const {
+    trashNotes,
+    isTrashLoading,
+    trashError,
+    recoverNote,
+    deleteForever,
+    mutateTrashNotes,
+    operatingId: trashOperatingId,
+  } = useTrashNotes(success, apiError);
+
+  // Combined operating ID
+  const operatingId = notesOperatingId || archivedOperatingId || trashOperatingId;
+
+  // All tags
+  const allTags = useMemo(() => {
+    const tagMap = {};
+    [...notes, ...archivedNotes, ...trashNotes].forEach((note) => {
+      note.tags.forEach((tag) => {
+        if (!tagMap[tag.name]) tagMap[tag.name] = tag;
+      });
+    });
+    return Object.values(tagMap);
+  }, [notes, archivedNotes, trashNotes]);
+
+  // Tag handlers
+  const handleEditTag = async (tagId, newName) => {
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+    try {
+      await api.put(`/tags/${tagId}`, { name: trimmedName });
+      await mutateNotes();
+      success("Tag updated successfully");
+    } catch (err) {
+      apiError(err, "update tag");
+    }
   };
 
-  /* ------------------ Filter ------------------ */
   const applyTagFilter = (tagIds) => {
     const current = [...selectedTagIds].sort().join(",");
     const next = [...tagIds].sort().join(",");
-
     if (current !== next) {
       setView("all-notes");
       setSelectedTagIds(tagIds);
     }
   };
 
-  /* ------------------ Notes API ------------------ */
-
-  /* ------------------ Notes CRUD ------------------ */
-  const handleCreateNote = async ({ title, content, tag_ids }) => {
-    if (!title.trim()) return;
-
-    try {
-      await api.post("/notes", { title, content, tag_ids });
-      await mutateNotes(); // revalidate notes
-      success("Note created");
-      setView("all-notes");
-    } catch (err) {
-      apiError(err, "create note");
-    }
+  const handleCreateNote = async (noteData) => {
+    const created = await createNote(noteData);
+    if (created) setView("all-notes");
   };
 
-  const startEdit = (note) => {
-    setEditingNoteId(note.id);
-    setEditError(null);
+  const handleDeleteNote = async (id) => {
+    await deleteNote(id);
+    await mutateTrashNotes();
   };
 
-  const cancelEdit = () => {
-    setEditingNoteId(null);
-    setEditError(null);
+  const handleArchiveNote = async (id) => {
+    await archiveNote(id);
+    await mutateNotes();
   };
 
-  const updateNote = async (id, title, content) => {
-    if (!title.trim()) {
-      setEditError("Title cannot be empty");
-      return;
-    }
-
-    setOperatingId(id);
-    try {
-      await api.put(`/notes/${id}`, { title, content });
-      await mutateNotes();
-      success("Note updated");
-      setEditingNoteId(null);
-    } catch (err) {
-      apiError(err, "update note");
-    } finally {
-      setOperatingId(null);
-    }
+  const handleUnarchiveNote = async (id) => {
+    await unarchiveNote(id);
+    await mutateNotes();
   };
 
-  /* ------------------ Delete Note Mutation (Soft Delete - Move to Trash) ------------------ */
-  const { trigger: deleteNoteTrigger } = useSWRMutation(
-    "/notes/delete",
-    async (url, { arg }) => {
-      const res = await api.delete(`/notes/${arg}`);
-      return res.data;
-    }
-  );
-
-  const deleteNote = async (id) => {
-    setOperatingId(id);
-    try {
-      const res = await deleteNoteTrigger(id);
-      if (res?.success) {
-        success(res.message || "Note moved to trash");
-        await mutateNotes();
-        await mutateTrashNotes();
-      } else {
-        apiError(
-          {
-            response: {
-              data: { error: res?.error || "Failed to delete note" },
-            },
-          },
-          "delete note"
-        );
-      }
-    } catch (err) {
-      apiError(err, "delete note");
-    } finally {
-      setOperatingId(null);
-    }
-  };
-
-  /* ------------------ Archive Note Mutation ------------------ */
-  const { trigger: archiveNoteTrigger, isMutating: isArchiving } =
-    useSWRMutation("/notes/archive", async (url, { arg }) => {
-      const res = await api.put(`/notes/${arg}/archive`);
-      return res.data;
-    });
-
-  const archiveNote = async (id) => {
-    setOperatingId(id);
-    try {
-      const res = await archiveNoteTrigger(id);
-      if (res?.success) {
-        success(res.message || "Note archived");
-        await mutateNotes();
-        await mutateArchivedNotes();
-      } else {
-        apiError(
-          {
-            response: {
-              data: { error: res?.error || "Failed to archive note" },
-            },
-          },
-          "archive note"
-        );
-      }
-    } catch (err) {
-      apiError(err, "archive note");
-    } finally {
-      setOperatingId(null);
-    }
-  };
-
-  /* ------------------ Unarchive Note Mutation ------------------ */
-  const { trigger: unarchiveNoteTrigger, isMutating: isUnarchiving } =
-    useSWRMutation("/notes/unarchive", async (url, { arg }) => {
-      const res = await api.put(`/notes/${arg}/unarchive`);
-      return res.data;
-    });
-
-  const unarchiveNote = async (id) => {
-    setOperatingId(id);
-    try {
-      const res = await unarchiveNoteTrigger(id);
-      if (res?.success) {
-        success(res.message || "Note unarchived");
-        await mutateNotes();
-        await mutateArchivedNotes();
-      } else {
-        apiError(
-          {
-            response: {
-              data: { error: res?.error || "Failed to unarchive note" },
-            },
-          },
-          "unarchive note"
-        );
-      }
-    } catch (err) {
-      apiError(err, "unarchive note");
-    } finally {
-      setOperatingId(null);
-    }
-  };
-
-  /* ------------------ Recover Note Mutation ------------------ */
-  const { trigger: recoverNoteTrigger } = useSWRMutation(
-    "/notes/recover",
-    async (url, { arg }) => {
-      const res = await api.put(`/notes/${arg}/recover`);
-      return res.data;
-    }
-  );
-
-  const recoverNote = async (id) => {
-    setOperatingId(id);
-    try {
-      const res = await recoverNoteTrigger(id);
-      if (res?.success) {
-        success(res.message || "Note recovered successfully");
-        await mutateNotes();
-        await mutateTrashNotes();
-      } else {
-        apiError(
-          {
-            response: {
-              data: { error: res?.error || "Failed to recover note" },
-            },
-          },
-          "recover note"
-        );
-      }
-    } catch (err) {
-      apiError(err, "recover note");
-    } finally {
-      setOperatingId(null);
-    }
-  };
-
-  /* ------------------ Delete Forever Mutation ------------------ */
-  const { trigger: deleteForeverTrigger } = useSWRMutation(
-    "/notes/delete-forever",
-    async (url, { arg }) => {
-      const res = await api.delete(`/notes/${arg}/permanent`);
-      return res.data;
-    }
-  );
-
-  const deleteForever = async (id) => {
-    setOperatingId(id);
-    try {
-      const res = await deleteForeverTrigger(id);
-      if (res?.success) {
-        success(res.message || "Note permanently deleted");
-        await mutateTrashNotes();
-      } else {
-        apiError(
-          {
-            response: {
-              data: { error: res?.error || "Failed to delete note forever" },
-            },
-          },
-          "delete note forever"
-        );
-      }
-    } catch (err) {
-      apiError(err, "delete note forever");
-    } finally {
-      setOperatingId(null);
-    }
-  };
-
-  const handleNoteTagsUpdated = async (noteId) => {
-    try {
-      await mutateNotes(); // re-fetch all notes
-    } catch (err) {
-      console.error("Failed to refresh note tags:", err);
-    }
+  const handleRecoverNote = async (id) => {
+    await recoverNote(id);
+    await mutateNotes();
   };
 
   return (
@@ -368,16 +148,12 @@ export default function Dashboard({ showNoteForm = false }) {
         onApplyFilter={applyTagFilter}
       />
 
-      <Box flex="1" bg="bg.page" borderColor="border.subtle" p={6}>
+      <Box flex="1" bg="bg.page" p={6}>
         <Flex gap={6} w="full" direction={{ base: "column", lg: "row" }}>
-          {/* Main Content Area */}
           <Box flex="1">
             <Container maxW={showNoteForm ? "full" : "container.lg"}>
               <Stack gap={8}>
-                {/* Search Bar - Show for views that display notes */}
-                {(view === "all-notes" ||
-                  view === "archived" ||
-                  view === "trash") && (
+                {(view === "all-notes" || view === "archived" || view === "trash") && (
                   <SearchBar
                     onSearch={setSearchQuery}
                     placeholder={
@@ -395,11 +171,7 @@ export default function Dashboard({ showNoteForm = false }) {
                     <Alert.Indicator />
                     <Alert.Title>Unable to load notes</Alert.Title>
                     <Alert.Description>
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        onClick={() => mutateNotes()}
-                      >
+                      <Button size="xs" variant="outline" onClick={() => mutateNotes()}>
                         Retry
                       </Button>
                     </Alert.Description>
@@ -416,16 +188,16 @@ export default function Dashboard({ showNoteForm = false }) {
                     searchQuery={searchQuery}
                     editingNoteId={editingNoteId}
                     operatingId={operatingId}
-                    onEdit={startEdit}
-                    onDelete={deleteNote}
-                    onArchive={archiveNote}
+                    onEdit={(note) => setEditingNoteId(note.id)}
+                    onDelete={handleDeleteNote}
+                    onArchive={handleArchiveNote}
                     onUpdate={updateNote}
-                    onCancel={cancelEdit}
+                    onCancel={() => setEditingNoteId(null)}
                     onEditTag={handleEditTag}
                     allTags={allTags}
                     onAlertError={apiError}
                     onAlertSuccess={success}
-                    onTagsChanged={handleNoteTagsUpdated}
+                    onTagsChanged={mutateNotes}
                     singleColumn={showNoteForm}
                   />
                 )}
@@ -436,19 +208,19 @@ export default function Dashboard({ showNoteForm = false }) {
                     isLoading={isArchivedLoading}
                     error={archivedError}
                     searchQuery={searchQuery}
-                    onUnarchive={unarchiveNote}
-                    onEdit={startEdit}
-                    onDelete={deleteNote}
+                    onUnarchive={handleUnarchiveNote}
+                    onEdit={(note) => setEditingNoteId(note.id)}
+                    onDelete={handleDeleteNote}
                     editingNoteId={editingNoteId}
                     onUpdate={updateNote}
-                    onCancel={cancelEdit}
+                    onCancel={() => setEditingNoteId(null)}
                     operatingId={operatingId}
                     onEditTag={handleEditTag}
                     allTags={allTags}
                     onAlertError={apiError}
                     onAlertSuccess={success}
-                    onTagsChanged={handleNoteTagsUpdated}
-                    onRetry={() => mutateArchivedNotes()}
+                    onTagsChanged={mutateNotes}
+                    onRetry={mutateArchivedNotes}
                   />
                 )}
 
@@ -458,20 +230,19 @@ export default function Dashboard({ showNoteForm = false }) {
                     isLoading={isTrashLoading}
                     error={trashError}
                     searchQuery={searchQuery}
-                    onRecover={recoverNote}
+                    onRecover={handleRecoverNote}
                     onDeleteForever={deleteForever}
                     operatingId={operatingId}
                     allTags={allTags}
                     onAlertError={apiError}
                     onAlertSuccess={success}
-                    onRetry={() => mutateTrashNotes()}
+                    onRetry={mutateTrashNotes}
                   />
                 )}
               </Stack>
             </Container>
           </Box>
 
-          {/* Right Side Panel - NoteForm */}
           {showNoteForm && (
             <Box
               w={{ base: "full", lg: "400px" }}
